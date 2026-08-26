@@ -479,7 +479,35 @@ def solve_zoom(segs, prof, face_y=0.22, toks=None, avoid_punch_ids=None):
                                                     cr.get("max_duration_s", 7.0)), 3),
                               "confidence": 68, "origin": "inferred"}
                 _renorm_jump(ci + 1, target)
+
+    # ---- passada final (v2.6): nenhum settle abaixo de 1,0. Quando a busca de
+    # escalas falha (salto minimo alto aperta as restricoes), o fallback por
+    # grade podia deixar scale_from < 1,0 -- o video abria alem do quadro.
+    # O scale_to (repouso) e PRESERVADO quando possivel: e ele que garante o
+    # salto no corte seguinte; so o percurso encurta. O teto e o dos PUNCHES
+    # (1,16), nunca hi_s: um clamp em hi_s esmagaria o punch-in.
+    for s in segs:
+        z = s["zoom"]
+        if z["scale_to"] < lo_s:          # settle inteiro abaixo: desloca junto
+            d = round(lo_s - min(z["scale_from"], z["scale_to"]), 4)
+            z["scale_from"] = round(z["scale_from"] + d, 4)
+            z["scale_to"] = round(z["scale_to"] + d, 4)
+        for k in ("scale_from", "scale_to"):
+            z[k] = round(min(1.16, max(lo_s, z[k])), 4)
     return segs
+
+
+def out_span_to_src(segs, t0, t1):
+    """Mapeia um intervalo da TIMELINE DE SAIDA para os trechos de fonte
+    correspondentes (a saida pula as pausas removidas)."""
+    spans = []
+    for s in segs:
+        o0 = s["out_start"]
+        o1 = o0 + s["duration"]
+        lo, hi = max(t0, o0), min(t1, o1)
+        if hi - lo > 0.05:
+            spans.append((s["src_start"] + (lo - o0), s["src_start"] + (hi - o0)))
+    return spans
 
 
 # --------------------------------------------------------------------------
@@ -963,6 +991,11 @@ def main():
             else:
                 w_px = W * 0.6
             w_pct = round(w_px / W, 4)
+            # imagem VERTICAL nao cabe na faixa acima da cabeca: vira cartao
+            # central (v2.6) -- grande, no centro, com o video desfocado atras
+            cc_cfg = (prof.get("graphics_overlays") or {}).get("center_card") or {}
+            is_center = bool(cc_cfg.get("enabled_default", True) and iw and ih
+                             and (iw / float(ih)) < float(cc_cfg.get("max_aspect", 1.15)))
             a, b = src2out(float(o["src_start"])), src2out(float(o["src_end"]))
             overlays.append({
                 "id": o.get("id", "OV%d" % (k + 1)), "type": "image",
@@ -975,6 +1008,8 @@ def main():
                            "mask": "rounded_rect", "corner_radius_pct": 0.03},
                 "evidence": o.get("why", ""), "confidence": 74, "origin": "inferred",
             })
+            if is_center:
+                overlays[-1]["_center_card"] = True
 
     # ---- push-down (padrao v2.5): o video desce e abre palco para a insercao.
     # Aplicado no render DEPOIS das legendas -- elas descem junto, sem trocar de
@@ -982,7 +1017,8 @@ def main():
     # transicao; a imagem so entra em fade depois da descida completa.
     push_plan = None
     pd_cfg = (prof.get("graphics_overlays") or {}).get("push_down") or {}
-    if overlays and blocks and pd_cfg.get("enabled_default", True) and not args.no_push:
+    band_ovs = [o for o in overlays if not o.get("_center_card")]
+    if band_ovs and blocks and pd_cfg.get("enabled_default", True) and not args.no_push:
         lh = prof["captions"]["typography"]["line_height_ratio"]
         # fundo real do texto: ancora + linhas + folga p/ descensor do serifado
         text_bottom = max(anchor_pct * H + b["lines"] * b["font_size_px"] * lh
@@ -1030,8 +1066,8 @@ def main():
             bw_box = int(W * float(pd_cfg.get("box_width_pct", 0.825))) // 2 * 2
             maxcrop = float(pd_cfg.get("max_vertical_crop", 0.25))
 
-            windows = []
-            for ov in overlays:
+            windows, placed = [], []
+            for ov in band_ovs:
                 a0 = max(0.9, _snap_start(ov["start"]))
                 a0, _ = _clear_fwd(a0, a0 + ramp)
                 up_end = _snap_end(ov["end"])
@@ -1047,19 +1083,65 @@ def main():
                     print("[plan] %s: janela curta demais para push (%.2fs), "
                           "fica no top_band" % (ov["id"], img_en - img_st))
                     continue
+                placed.append((ov, a0, up_end, img_st, img_en))
+
+            # ---- folga REAL por janela (v2.6): a testa dela sobe e desce ao
+            # longo do video (medido: 0,25 a 0,40 da altura no mesmo video).
+            # Medir o topo da face NO TRECHO de cada insercao permite caixa ate
+            # ~2x mais alta -- uma 16:9 entra INTEIRA -- em vez do p02 global.
+            hw_cfg = (prof.get("graphics_overlays") or {}).get("per_window_headroom") or {}
+            fh_min = [None] * len(placed)
+            if placed and hw_cfg.get("enabled", True) and not args.no_subject:
+                try:
+                    sys.path.insert(0, HERE)
+                    from detect_subject import forehead_min_in_spans
+                    spans, idx_of = [], []
+                    for i, (ov, a0, up_end, img_st, img_en) in enumerate(placed):
+                        for sp in out_span_to_src(segs, img_st, img_en):
+                            spans.append(sp)
+                            idx_of.append(i)
+                    per_span = forehead_min_in_spans(
+                        args.source, spans,
+                        step_s=float(hw_cfg.get("sample_step_s", 0.12)))
+                    for j, v in enumerate(per_span):
+                        if v is None:
+                            continue
+                        i = idx_of[j]
+                        fh_min[i] = v if fh_min[i] is None else min(fh_min[i], v)
+                except Exception as exc:
+                    print("[plan] folga por janela indisponivel (%s); usando o p02 global" % exc)
+
+            margin = int(round(float(hw_cfg.get("margin_before_forehead_px", 26))
+                               * H / 1920.0))
+            top_px = int(round(sm2["top_pct"] * H))
+            bw_max = int(W * float(sm2.get("max_width_pct", 0.86))) // 2 * 2
+            for i, (ov, a0, up_end, img_st, img_en) in enumerate(placed):
+                room = bh
+                if fh_min[i] is not None:
+                    meas = int(fh_min[i] * H) + D - margin - top_px
+                    room = max(120, min(meas, int(0.45 * H))) // 2 * 2
                 try:
                     from PIL import Image
                     iw2, ih2 = Image.open(ov["params"]["path"]).size
                     a_img = iw2 / float(ih2)
                 except Exception:
-                    a_img = bw_box / float(bh)
-                a_box = bw_box / float(bh)
-                if a_img >= a_box * (1.0 - maxcrop):
-                    bw_i = bw_box          # cover: corte vertical <= maxcrop
+                    a_img = bw_box / float(room)
+                # preferir a imagem INTEIRA: caixa no aspecto da propria imagem,
+                # limitada pela folga medida e pela largura maxima. So cai no
+                # cover (com corte <= maxcrop) se a inteira ficar estreita demais.
+                fit_h = int(bw_max / a_img) // 2 * 2
+                if fit_h <= room:
+                    bw_i, bh_i = bw_max, fit_h            # inteira, largura maxima
+                elif int(room * a_img) >= int(0.31 * W):
+                    bh_i = room                            # inteira, altura maxima
+                    bw_i = min(bw_max, int(room * a_img)) // 2 * 2
                 else:
-                    bw_i = max(int(0.31 * W), int(bh * a_img / (1.0 - maxcrop))) // 2 * 2
+                    bh_i = room                            # cover com corte
+                    bw_i = max(int(0.31 * W),
+                               int(room * a_img / (1.0 - maxcrop))) // 2 * 2
+                    bw_i = min(bw_i, bw_max) // 2 * 2
                 ov["params"]["mode"] = "push_down"
-                ov["params"]["box"] = {"w_px": bw_i, "h_px": bh}
+                ov["params"]["box"] = {"w_px": bw_i, "h_px": bh_i}
                 ov["params"]["pos"] = {"x_pct": round((1 - bw_i / float(W)) / 2, 4),
                                        "y_pct": sm2["top_pct"],
                                        "w_pct": round(bw_i / float(W), 4)}
@@ -1080,6 +1162,118 @@ def main():
                              "origin": "inferred",
                              "windows": [{"down_start": a0, "up_end": b0}
                                          for a0, b0 in merged]}
+
+                # insercoes vizinhas na MESMA janela: troca SECA e sem buraco.
+                # Fade cruzado aqui vira dupla exposicao (as duas alfas somam
+                # sobre o palco) e o intervalo im_en/im_st deixa a faixa vazia.
+                pushed = sorted((p[0] for p in placed), key=lambda o: o["start"])
+                def _win_of(o):
+                    for k, (wa, wb) in enumerate(merged):
+                        if wa - 1e-6 <= o["start"] and o["end"] <= wb + 1e-6:
+                            return k
+                    return -1
+                for a, b in zip(pushed, pushed[1:]):
+                    if (_win_of(a) == _win_of(b) >= 0
+                            and 0 <= b["start"] - a["end"] < 1.2):
+                        a["end"] = b["start"]
+                        a["duration"] = round(a["end"] - a["start"], 4)
+                        a["params"]["exit_ms"] = 0
+                        b["params"]["entry_ms"] = 0
+
+    # ---- cartao central (v2.6): insercao VERTICAL (aspecto < ~1,15) nao cabe
+    # na faixa acima da cabeca -- num quadro 9:16 ela renderizaria com ~1/4 da
+    # largura, ilegivel. Em vez disso ela vira um CARTAO grande no centro, com
+    # o video inteiro DESFOCADO atras (gblur full_frame) e a legenda ancorada
+    # logo abaixo da imagem: imagem+legenda formam um componente unico centrado
+    # na vertical (aprovado pelo Gabriel em 26/08, video cida-inss). Janelas
+    # alinhadas a fronteiras de bloco: desfoque, cartao e reposicionamento da
+    # legenda acontecem no MESMO frame. Cartoes vizinhos dividem um desfoque so
+    # e trocam por corte seco.
+    footer_anchor_pct = None
+    cc = (prof.get("graphics_overlays") or {}).get("center_card") or {}
+    center_ovs = sorted((o for o in overlays if o.get("_center_card")),
+                        key=lambda o: o["start"])
+    for o in overlays:
+        o.pop("_center_card", None)
+    if center_ovs:
+        groups = [[center_ovs[0]]]
+        for o in center_ovs[1:]:
+            if o["start"] - groups[-1][-1]["end"] < 0.6:
+                groups[-1].append(o)
+            else:
+                groups.append([o])
+
+        lh = prof["captions"]["typography"]["line_height_ratio"]
+        pwins = (push_plan or {}).get("windows") or []
+        sigma = float(cc.get("blur_sigma", 26.0))
+        for grp in groups:
+            g_end = grp[-1]["end"]
+            # fim do grupo: emenda na descida da proxima janela de push, se
+            # houver uma logo em seguida; senao, na fronteira do ultimo bloco
+            nxt = min((w["down_start"] for w in pwins
+                       if g_end - 0.6 <= w["down_start"] <= g_end + 1.5),
+                      default=None)
+            if nxt is None:
+                covered = [b for b in blocks if b["start"] < g_end + 0.05]
+                nxt = covered[-1]["end"] if covered else g_end
+            guess = grp[0]["start"]
+            card_blocks = [b for b in blocks
+                           if b["end"] > guess + 0.05 and b["end"] <= nxt + 0.1]
+            if card_blocks:
+                grp[0]["start"] = card_blocks[0]["start"]
+            for a, b in zip(grp, grp[1:]):   # trocas internas em fronteira de bloco
+                swap = min((blk["start"] for blk in card_blocks),
+                           key=lambda x: abs(x - b["start"]), default=b["start"])
+                if abs(swap - b["start"]) <= 0.6:
+                    b["start"] = swap
+                a["end"] = b["start"]
+            grp[-1]["end"] = round(nxt, 4)
+            for ta, tb in ((t["start"], t["end"]) for t in transitions):
+                if grp[0]["start"] < tb and ta < grp[-1]["end"]:
+                    print("[plan] AVISO: transicao %.2f-%.2f dentro do cartao "
+                          "central -- confira no rascunho" % (ta, tb))
+
+            # componente imagem+legenda centrado na vertical
+            img_h = int(round(float(cc.get("img_height_pct", 0.578)) * H))
+            gap = int(round(float(cc.get("gap_px_at_1920", 34)) * H / 1920.0))
+            top_min = int(round(float(cc.get("top_min_px_at_1920", 60)) * H / 1920.0))
+            cap_h = 0
+            if card_blocks:
+                fs_max = max(b["font_size_px"] for b in card_blocks)
+                cap_h = int(round(2 * fs_max * lh)) + gap
+            top = max(top_min, (H - (img_h + cap_h)) // 2)
+            if card_blocks:
+                footer_anchor_pct = round((top + img_h + gap) / float(H), 4)
+                for b in card_blocks:
+                    b["anchor"] = "footer"
+
+            for o in grp:
+                try:
+                    from PIL import Image
+                    iw3, ih3 = Image.open(o["params"]["path"]).size
+                except Exception:
+                    iw3, ih3 = 3, 4
+                w_disp = int(round(img_h * iw3 / float(ih3)))
+                w_cap = int(prof["graphics_overlays"]["safe_margins"]["max_width_pct"] * W)
+                w_disp = min(w_disp, w_cap) // 2 * 2
+                o["params"]["mode"] = "center_card"
+                o["params"]["pos"] = {"x_pct": round((1 - w_disp / float(W)) / 2, 4),
+                                      "y_pct": round(top / float(H), 4),
+                                      "w_pct": round(w_disp / float(W), 4)}
+                o["params"]["mask"] = "rounded_rect"
+                o["params"]["corner_radius_pct"] = float(cc.get("corner_radius_pct", 0.03))
+                o["params"]["entry_ms"] = 0     # corte seco, estilo jump cut:
+                o["params"]["exit_ms"] = 0      # fade num cartao cheio vira fantasma
+                o["duration"] = round(o["end"] - o["start"], 4)
+
+            blurs.append({
+                "id": "BLR_CARD%d" % (len(blurs) + 1), "type": "gaussian",
+                "start": grp[0]["start"], "end": grp[-1]["end"],
+                "duration": round(grp[-1]["end"] - grp[0]["start"], 4),
+                "params": {"sigma": sigma, "region": "full_frame"},
+                "evidence": "video desfocado atras do cartao central (%s)"
+                            % ", ".join(o["id"] for o in grp),
+                "confidence": 80, "origin": "inferred"})
 
     # legenda nunca sob uma insercao no topo
     for blk in blocks:
@@ -1151,7 +1345,8 @@ def main():
             "side_margin_pct": cap["layout"]["side_margin_pct"],
             "tracking_px": cap["typography"]["tracking_px_at_reference"] * (W / 720.0),
             "anchors": {"lower_default": anchor_pct,
-                        "footer": cap["layout"]["anchors"]["footer"]["bbox_top_pct"],
+                        "footer": (footer_anchor_pct if footer_anchor_pct is not None
+                                   else cap["layout"]["anchors"]["footer"]["bbox_top_pct"]),
                         "upper": cap["layout"]["anchors"]["upper"]["bbox_top_pct"]},
             "max_width_pct": cap["layout"]["max_width_pct_of_canvas"],
             "shadow": {"present": bool(cap["color"]["shadow"].get("present", False)),
@@ -1236,6 +1431,23 @@ def main():
                   % (sg["id"], zz["preset_id"], zz["scale_from"], zz["scale_to"],
                      zz["duration"], sg["duration"], sg["out_start"]))
     print("insercoes        : %d (%.1f/min)" % (len(overlays), len(overlays) / mins))
+    for o in overlays:
+        pa = o["params"]
+        modo = pa.get("mode", "top_band")
+        if modo == "center_card":
+            geom = "%dpx de largura + legenda em %.3f" % (
+                int(round(pa["pos"]["w_pct"] * W)), footer_anchor_pct or 0)
+        elif pa.get("box"):
+            geom = "caixa %dx%d" % (pa["box"]["w_px"], pa["box"]["h_px"])
+        else:
+            geom = "%dpx de largura" % int(round(pa["pos"]["w_pct"] * W))
+        print("   %-5s %-12s out %6.2f-%6.2f  %s  entry %dms exit %dms"
+              % (o["id"], modo, o["start"], o["end"], geom,
+                 pa.get("entry_ms", 0), pa.get("exit_ms", 0)))
+    for bl in blurs:
+        if str(bl.get("id", "")).startswith("BLR_CARD"):
+            print("   desfoque de fundo %.2f-%.2f (sigma %.0f)"
+                  % (bl["start"], bl["end"], bl["params"]["sigma"]))
     if push_plan:
         print("push-down        : desce %dpx, rampa %.2fs, %d janela(s)"
               % (push_plan["dist_px"], push_plan["ramp_s"], len(push_plan["windows"])))

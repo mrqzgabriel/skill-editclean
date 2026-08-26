@@ -379,6 +379,40 @@ Quando o full falha ou vem bloqueado, o `thumbnailUrl` aponta para `encrypted-tb
 baixa sempre e costuma ter 500–740 px — suficiente, já que a inserção raramente passa de 1240 px.
 O script cai para ele sozinho (`--no-fallback-thumb` desliga).
 
+### A caixa é dimensionada pela folga do TRECHO — e a 16:9 entra inteira **[v2.6, medido]**
+
+A folga acima da cabeça **varia** ao longo do vídeo: no cida-inss a testa oscilou entre **0,25 e
+0,40 da altura** conforme ela se inclinava. Usar o p02 global desperdiça até metade do palco.
+
+O `build_plan.py` agora mede o topo da face (YuNet) **dentro da janela de cada inserção** (timeline
+de saída mapeada de volta à fonte) e deixa a imagem descer até **26 px antes da testa** — invade só
+o alto do cabelo, nunca o rosto. Com o palco medido, a caixa **prefere a imagem inteira**: aspecto
+da própria imagem, largura até 86%. Medido: caixa 928×522 (16:9 **sem corte nenhum**) onde o
+global dava 890×340 com corte. Só cai no *cover* se a imagem inteira ficar mais estreita que 0,31
+da largura. Sem detecção na janela, vale o limite global do `subject.json` (o relatório avisa).
+
+Duas inserções na **mesma janela de push trocam por corte seco**: fade cruzado soma os dois alfas
+sobre o palco (dupla exposição, medido em frames), e o intervalo entre fades deixa a faixa vazia.
+
+### Imagem vertical vira cartão central **[v2.6, preferência do Gabriel]**
+
+Imagem em pé (aspecto < ~1,15) na faixa renderiza com ~1/4 da largura — ilegível. Pedido do
+Gabriel (26/08, aprovado "ficou perfeito"): ela vira um **cartão grande no centro**:
+
+- vídeo inteiro **desfocado** atrás (`gblur` full_frame, σ 26) — a pessoa continua lá;
+- imagem com **~58% da altura** do canvas, centrada;
+- a **legenda desce para logo abaixo da imagem** (âncora `footer` recalculada): imagem+legenda
+  formam um componente único **centrado na vertical**;
+- janelas em **fronteira de bloco**: desfoque, cartão e reposição da legenda mudam no MESMO frame;
+- cartões vizinhos dividem **um** desfoque e trocam por **corte seco**; entrada/saída secas
+  (fade em cartão cheio deixa a pessoa "fantasma" sobre o fundo);
+- com janela de push logo depois, o cartão termina **exatamente no down_start** dela — desfoque
+  sai, vídeo desce, faixa entra, sem buraco.
+
+No render o cartão é um overlay clássico (entra **antes** das legendas no filtergraph, passo 6),
+por isso o texto fica por cima; o desfoque é um evento `blurs` comum. Parâmetros em
+`graphics_overlays.center_card`.
+
 ### A proporção manda mais que a resolução **[v2.4]**
 
 A faixa útil fica entre o topo e o `head_top` medido — tipicamente **~15% da altura do canvas**.

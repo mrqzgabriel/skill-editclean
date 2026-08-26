@@ -999,9 +999,10 @@
         "type": "string",
         "enum": [
          "top_band",
-         "push_down"
+         "push_down",
+         "center_card"
         ],
-        "description": "push_down = renderizada depois das legendas, sobre o video deslocado"
+        "description": "push_down = renderizada depois das legendas, sobre o video deslocado; center_card = imagem vertical grande no centro, com o video desfocado atras (classica no filtergraph)"
        },
        "box": {
         "type": "object",

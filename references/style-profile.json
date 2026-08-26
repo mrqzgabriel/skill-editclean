@@ -1,6 +1,6 @@
 {
  "profile_name": "EditClean",
- "profile_version": "2.5.0",
+ "profile_version": "2.6.0",
  "derived_from": "ANALISE_TECNICA_EDICAO_VIDEO_REFERENCIA.md + medicao direta de 294 frames de 'Edit Pro/Video referencia.mp4' + preferencias do usuario (ver user_overrides)",
  "reference_material": {
   "duration_s": 152.2,
@@ -739,6 +739,23 @@
    "box_width_pct": 0.825,
    "max_vertical_crop": 0.25,
    "note": "Padrao desde 26/08 (aprovado no IMG_1184 v2): o video desliza para baixo (smoothstep, rampa 0.35s) e a insercao aparece numa faixa ~2:1 em vez de 5:1. dist = min(0.16*H, H*(1-ui_reserve) - fundo_real_da_legenda); ui_reserve segura a UI do Reels. Janelas alinhadas a fronteira de bloco de legenda e fora de transicao; a imagem entra em fade SO depois da descida completa. Legendas descem junto porque o push e aplicado DEPOIS delas no filtergraph. Se a folga der menos que dist_min_px, cai no top_band antigo."
+  },
+  "per_window_headroom": {
+   "enabled": true,
+   "margin_before_forehead_px": 26,
+   "sample_step_s": 0.12,
+   "note": "v2.6 (cida-inss, 26/08): a folga acima da cabeca VARIA por trecho (testa entre 0,25 e 0,40 da altura no mesmo video). O build_plan mede o topo da face com YuNet DENTRO da janela de cada insercao (timeline de saida mapeada de volta a fonte) e dimensiona a caixa por essa folga real: a imagem pode descer ate 26px antes da testa -- invade so o alto do cabelo, nunca o rosto. Resultado medido: caixa 928x522 (16:9 INTEIRA, sem corte) onde o p02 global dava 890x340. Fallback: sem deteccao na janela, vale o limite global do subject.json."
+  },
+  "center_card": {
+   "enabled_default": true,
+   "max_aspect": 1.15,
+   "blur_sigma": 26.0,
+   "img_height_pct": 0.578,
+   "gap_px_at_1920": 34,
+   "top_min_px_at_1920": 60,
+   "corner_radius_pct": 0.03,
+   "hard_cut": true,
+   "note": "v2.6 (cida-inss, 26/08, aprovado: 'ficou perfeito'): imagem VERTICAL (aspecto < 1,15) nao serve na faixa do push -- renderiza com ~1/4 da largura, ilegivel. Ela vira um CARTAO grande no centro: video inteiro desfocado atras (gblur full_frame, sigma 26), imagem com ~58% da altura do canvas, e a LEGENDA reancorada (footer) logo abaixo da imagem -- imagem+legenda formam um componente unico centrado na vertical. Janelas alinhadas a fronteira de bloco (desfoque, cartao e legenda mudam no MESMO frame); cartoes vizinhos dividem um desfoque e trocam por corte seco; entrada/saida SECAS (fade em cartao cheio deixa a apresentadora fantasma sobre o fundo). Se houver janela de push logo depois, o cartao termina exatamente no down_start dela."
   }
  },
  "opening": {
@@ -920,6 +937,10 @@
   "images_no_identifiable_private_people": true,
   "images_no_identifiable_private_people_note": "Descartar print real que exponha NOME + FOTO de pessoa privada identificavel (lista de conversas com contatos reais, por exemplo). Num video comercial isso e risco -- ha decisao do STJ sobre divulgacao de print de conversa de WhatsApp. Preferir print sem nome visivel, ou recortar. Nao confundir com 'nome borrado pelo blog', que fica com cara de censura e tambem deve ser evitado por estetica.",
   "insertion_push_down": true,
-  "insertion_push_down_note": "Pedido 26/08 no IMG_1184: 'as imagens ... ficaram cortadas, o que acha de arrastar o video pra baixo e mostrar a imagem melhor'. Entregue e aprovado ('Ficou otimo!'). E o modo padrao de insercao; --no-push desliga. Imagens de origem devem chegar PROXIMAS de 2:1 (nao pre-recortar em 5:1: o renderer faz cover na caixa)."
+  "insertion_push_down_note": "Pedido 26/08 no IMG_1184: 'as imagens ... ficaram cortadas, o que acha de arrastar o video pra baixo e mostrar a imagem melhor'. Entregue e aprovado ('Ficou otimo!'). E o modo padrao de insercao; --no-push desliga. Imagens de origem devem chegar PROXIMAS de 2:1 (nao pre-recortar em 5:1: o renderer faz cover na caixa).",
+  "insertion_per_window_headroom": true,
+  "insertion_per_window_headroom_note": "Pedido 26/08 ('as imagens tem que ser em tamanho maior'): caixa dimensionada pela folga REAL medida no trecho de cada insercao, nao pelo pior caso global. 16:9 entra inteira onde ha folga.",
+  "vertical_image_center_card": true,
+  "vertical_image_center_card_note": "Pedido 26/08 ('quero que apareca no centro da tela com o video desfocado' + 'mais pra baixo junto a legenda e a imagem em um componente e centralize'): imagem vertical vira cartao central com desfoque de fundo e legenda colada abaixo, componente centrado. Aprovado: 'ficou perfeito'."
  }
 }

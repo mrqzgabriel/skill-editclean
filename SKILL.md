@@ -189,11 +189,22 @@ Regras:
    comercial. Print com nome borrado pelo blog também sai: fica com cara de censura.
 4. **Recorte marcas de terceiros** — e principalmente de **concorrentes do usuário** (seria péssimo
    mostrar concorrente no VSL dele). Recortar a região útil quase sempre resolve.
-5. **Proporção: entregue a imagem próxima de 2:1 e não pré-recorte em panorâmica.** Com o
-   push-down (padrão, ver §6) a faixa útil cresce ~2×; o renderer faz *cover* na caixa (~0,825 da
-   largura × faixa) e corta só o excesso centrado. Uma 16:9 perde ~10% da altura; uma 5:1 pré-
-   recortada perderia mais da metade da largura à toa. Print de celular **em pé** continua fora
-   (recorte uma faixa horizontal, ou foto do aparelho na mão/na mesa); o mínimo continua ≥ ~1,15:1.
+5. **Proporção: não pré-recorte em panorâmica — a caixa agora é dimensionada por janela (v2.6).**
+   O `build_plan.py` mede a folga REAL acima da cabeça no trecho de cada inserção
+   (`per_window_headroom`: YuNet dentro da janela, imagem até 26 px antes da testa) e prefere a
+   imagem **inteira**: uma 16:9 entra sem corte nenhum onde há folga (caixa tipo 928×522), e só
+   cai no *cover* quando a inteira ficaria estreita demais. **Confira as caixas impressas no
+   relatório** (`insercoes: OVn caixa WxH`); se quiser controlar o enquadramento, recorte a imagem
+   no aspecto exato da caixa impressa e rode de novo. Uma 5:1 pré-recortada continua desperdiçando
+   altura à toa.
+   **Imagem VERTICAL (aspecto < ~1,15) não vai para a faixa** — o `build_plan` a transforma
+   sozinho em **cartão central** (v2.6, aprovado 26/08): imagem grande (~58% da altura) no centro,
+   vídeo inteiro desfocado atrás (gblur σ26), e a legenda reancorada logo abaixo — imagem+legenda
+   viram um componente único centrado na vertical. Janelas alinhadas a fronteira de bloco (tudo
+   muda no mesmo frame), cartões vizinhos dividem um desfoque e trocam por corte seco, entrada e
+   saída SECAS (fade em cartão cheio deixa a pessoa "fantasma"). Se houver push logo depois, o
+   cartão termina exatamente no início da descida. Print de celular em pé, santinho e fachada em
+   retrato são os casos típicos.
    Margens conforme `graphics_overlays.safe_margins`: 3,5% de respiro no topo, largura ≤ 86% — e no
    modo clássico (`--no-push`) a **base fica acima da cabeça**, limite do `subject.json`.
 6. Se nada pertinente aparecer, **omita a inserção** e registre em `limitations`. Nunca use asset
@@ -231,7 +242,14 @@ O script já aplica **todas** as regras do perfil e imprime um relatório confer
   distância pelo fundo real da legenda + reserva de 11,5% para a UI do Reels, alinha as janelas a
   fronteiras de bloco de legenda, foge de transições, e a imagem só acende **depois** da descida
   completa (senão cruza a cabeça em movimento). `--no-push` desliga; sem folga vertical o script
-  avisa e cai sozinho no top_band clássico. Confira no relatório a linha `push-down`.
+  avisa e cai sozinho no top_band clássico. Confira no relatório a linha `push-down`;
+- **caixa por janela + cartão central (v2.6, pedidos do Gabriel 26/08)**: a altura da caixa vem da
+  folga MEDIDA no trecho de cada inserção (não do pior caso global) e prioriza a imagem inteira;
+  inserções vizinhas na mesma janela de push trocam por corte seco (fade cruzado = dupla
+  exposição); imagem vertical vira cartão central com desfoque de fundo e legenda ancorada abaixo
+  (âncora `footer` recalculada). Confira no relatório as linhas por inserção (`push_down` /
+  `center_card` / `desfoque de fundo`) e a nota `[plan] folga por janela indisponivel` — se ela
+  aparecer, o dimensionamento voltou ao limite global.
 
 **Confira o relatório contra o perfil.** Se algum número destoar muito, ajuste e rode de novo.
 

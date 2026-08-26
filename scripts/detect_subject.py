@@ -161,6 +161,57 @@ def detect(video, samples=40, quiet=False):
     }
 
 
+def forehead_min_in_spans(video, spans, step_s=0.12, max_samples=24):
+    """Menor topo de FACE (fracao da altura) dentro de cada janela de fonte.
+
+    Serve para dimensionar a caixa de uma insercao pela folga REAL daquele
+    trecho (v2.6): a folga varia muito ao longo do video (no cida-inss a testa
+    ficou em 0,39 numa janela e 0,25 em outra), e usar o p02 global desperdica
+    ate metade da altura disponivel. Devolve lista alinhada a `spans`
+    (None onde nao houve deteccao). `spans` = [(t0, t1), ...] em segundos.
+    """
+    try:
+        import cv2
+    except ImportError:
+        return [None] * len(spans)
+    if not os.path.exists(MODEL) or not hasattr(cv2, "FaceDetectorYN_create"):
+        return [None] * len(spans)
+    ffmpeg = _find_bin("ffmpeg")
+    if not ffmpeg:
+        return [None] * len(spans)
+
+    tmp = tempfile.mkdtemp(prefix="subjspan.")
+    det, out = None, []
+    try:
+        for (t0, t1) in spans:
+            step = max(step_s, (t1 - t0) / float(max_samples))
+            tops, t = [], t0
+            while t <= t1 + 1e-6:
+                p = os.path.join(tmp, "f.jpg")
+                subprocess.run([ffmpeg, "-v", "error", "-ss", "%.3f" % t, "-i", video,
+                                "-frames:v", "1", "-y", p],
+                               check=False, stdout=subprocess.DEVNULL,
+                               stderr=subprocess.DEVNULL)
+                im = cv2.imread(p) if os.path.exists(p) else None
+                if im is not None:
+                    h0, w0 = im.shape[:2]
+                    sc = 640.0 / w0
+                    small = cv2.resize(im, (640, int(h0 * sc)))
+                    if det is None:
+                        det = cv2.FaceDetectorYN_create(
+                            MODEL, "", (small.shape[1], small.shape[0]), 0.6, 0.3, 5000)
+                    det.setInputSize((small.shape[1], small.shape[0]))
+                    _, faces = det.detect(small)
+                    if faces is not None and len(faces):
+                        f = max(faces, key=lambda f: f[2] * f[3])
+                        tops.append(float((f[1] / sc) / h0))
+                t += step
+            out.append(min(tops) if tops else None)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser(description="Mede a posicao do sujeito no quadro")
     ap.add_argument("--video", required=True)
