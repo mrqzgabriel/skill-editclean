@@ -852,6 +852,75 @@
        "maximum": 1
       }
      }
+    },
+    "soft_glow": {
+     "type": "object",
+     "additionalProperties": false,
+     "properties": {
+      "enabled": {
+       "type": "boolean"
+      },
+      "color": {
+       "type": "string",
+       "pattern": "^#[0-9A-Fa-f]{6}$"
+      },
+      "alpha": {
+       "type": "number",
+       "minimum": 0,
+       "maximum": 1
+      },
+      "bord_px": {
+       "type": "number",
+       "minimum": 0,
+       "maximum": 40
+      },
+      "blur_px": {
+       "type": "number",
+       "minimum": 0,
+       "maximum": 60
+      },
+      "dy_px": {
+       "type": "number",
+       "minimum": -40,
+       "maximum": 40
+      }
+     }
+    },
+    "word_space_scale": {
+     "type": "number",
+     "minimum": 0.2,
+     "maximum": 1.5
+    },
+    "sans_bold_always": {
+     "type": "boolean"
+    },
+    "accent_glow": {
+     "type": "object",
+     "additionalProperties": false,
+     "properties": {
+      "enabled": {
+       "type": "boolean"
+      },
+      "color": {
+       "type": "string",
+       "pattern": "^#[0-9A-Fa-f]{6}$"
+      },
+      "alpha": {
+       "type": "number",
+       "minimum": 0,
+       "maximum": 1
+      },
+      "bord_px": {
+       "type": "number",
+       "minimum": 0,
+       "maximum": 40
+      },
+      "blur_px": {
+       "type": "number",
+       "minimum": 0,
+       "maximum": 60
+      }
+     }
     }
    }
   },

@@ -1,6 +1,6 @@
 {
  "profile_name": "EditClean",
- "profile_version": "2.0.0",
+ "profile_version": "2.1.1",
  "derived_from": "ANALISE_TECNICA_EDICAO_VIDEO_REFERENCIA.md + medicao direta de 294 frames de 'Edit Pro/Video referencia.mp4' + preferencias do usuario (ver user_overrides)",
  "reference_material": {
   "duration_s": 152.2,
@@ -433,10 +433,10 @@
     "identified_by": "usuario, a partir de frame do video",
     "report_estimate_was": "Georgia Italic / Times New Roman Italic / Bodoni Moda Italic"
    },
-   "font_size_pct_of_canvas_height": 0.0574,
+   "font_size_pct_of_canvas_height": 0.06,
    "font_size_pct_range": [
-    0.0455,
-    0.0633
+    0.048,
+    0.072
    ],
    "line_height_ratio": 1.205,
    "tracking_px_at_reference": -1.5,
@@ -444,10 +444,12 @@
    "case": "misto",
    "confidence": 92,
    "font_size_pct_median": 0.0406,
-   "font_size_origin": "MEDIDO: mediana 73.5px em canvas 1280 (306 linhas de texto isoladas por componentes conectados)",
+   "font_size_origin": "MEDIDO em duas rodadas: mediana 5.74% nos 294 frames do video de referencia; a captura de estilo aprovada pelo usuario usa corpo maior (~6.5%). Tipico 6.0%, faixa 4.8-7.2%; o auto-fit escolhe o maior corpo que cabe.",
    "line_height_origin": "MEDIDO: entrelinha mediana 81px / corpo 67px",
-   "accent_size_ratio": 1.45,
-   "accent_size_ratio_note": "MEDIDO e CONTRA-INTUITIVO: no mesmo corpo, Playfair e Helvetica Neue tem x-height (ratio 1.019) e cap-height (1.000) praticamente iguais. Mas na referencia os glifos do serifado aparecem 1.50-1.70x maiores que os da sem-serifa ('escreve' 37px vs 'roteiro' 55px; 'Vem comigo' 31px vs 'fazer' 47px). Logo o serifado e COMPOSTO MAIOR de proposito. Sem esse fator a enfase some visualmente."
+   "accent_size_ratio": 1.55,
+   "accent_size_ratio_note": "MEDIDO e CONTRA-INTUITIVO: no mesmo corpo, Playfair e Helvetica Neue tem x-height (ratio 1.019) e cap-height (1.000) praticamente iguais. Mas na referencia os glifos do serifado aparecem 1.50-1.70x maiores que os da sem-serifa ('escreve' 37px vs 'roteiro' 55px; 'Vem comigo' 31px vs 'fazer' 47px). Logo o serifado e COMPOSTO MAIOR de proposito. Sem esse fator a enfase some visualmente. Na captura de estilo de 26/08 (tarde) o ratio medido foi 1.51-1.56 -> 1.55.",
+   "sans_always_bold": true,
+   "sans_always_bold_note": "MEDIDO na captura de estilo: traco/x-height da sans = 0.225 ('mundo fala') e 0.209 ('de'), contra 0.207 da HN Bold e 0.126 da Regular. TODA palavra sem serifa e Bold; a enfase fica so por conta do serifado maior."
   },
   "emphasis": {
    "mechanism": "font_family_swap",
@@ -481,27 +483,44 @@
    "accent_share_origin": "inferido; o relatorio nao quantifica a fracao de palavras enfatizadas"
   },
   "color": {
-   "primary_hex": "#FCF8F6",
-   "accent_hex": "#FCF8F6",
+   "primary_hex": "#FBF8F4",
+   "accent_hex": "#FBF8F4",
    "outline": {
     "present": false,
     "width_px": 0
    },
    "shadow": {
-    "present": true,
+    "present": false,
     "share_of_blocks": 0.5,
     "offset_px": 4,
     "blur_px": 4,
     "alpha": 0.85,
     "color_hex": "#000000",
-    "note": "O relatorio sugeria 2px/0.62 como 'padrao seguro'. Verificado em frame renderizado: com esse valor o texto branco SOME sobre roupa clara ou maos. 4px/0.85 continua imperceptivel sobre fundo escuro e resolve o contraste."
+    "note": "v2.1: DESATIVADA em favor do soft_glow. A sombra dura deslocada (4px/0.85) era a diferenca mais visivel em relacao ao estilo real. Os campos ficam para compatibilidade."
    },
    "background_box": {
     "present": false
    },
    "confidence": 88,
    "accent_hex_note": "Branco igual ao resto. A enfase e feita SO por troca de familia tipografica. Qualquer diferenca de tom percebida em frames comprimidos e artefato, nao design.",
-   "color_origin": "MEDIDO: mediana RGB (252,248,246) em 46 amostras de nucleo erodido sobre fundo escuro. Branco levemente quente, nao #FFFFFF."
+   "color_origin": "MEDIDO: mediana RGB (252,248,246) em 46 amostras de nucleo erodido sobre fundo escuro. Branco levemente quente, nao #FFFFFF. Refinado na captura de estilo: (251,248,244) -> #FBF8F4.",
+   "soft_glow": {
+    "enabled": true,
+    "color": "#000000",
+    "alpha": 0.48,
+    "bord_px": 8,
+    "blur_px": 20,
+    "dy_px": 2,
+    "note": "Substitui a sombra dura. MEDIDO na captura de estilo: em volta do texto ha um halo escuro DIFUSO — luminancia do fundo cai de 131 para ~107 com pico em ~13-16px da borda (escala 1080) e extensao total ~30px, quase simetrico (dy pequeno). E ele que da a impressao de glow/degrade que o usuario notou; nos glifos em si NAO ha gradiente (delta ~4 niveis = compressao de video). Implementado como camada inferior: mesmo texto com borda+blur altos."
+   },
+   "accent_glow": {
+    "enabled": true,
+    "color": "#FFFFFF",
+    "alpha": 0.6,
+    "bord_px": 2.5,
+    "blur_px": 6,
+    "note": "Pedido do usuario 26/08: as palavras serifadas (Playfair) tem um glow proprio CLARO e CURTO, mais forte que o das demais — como em 'agente'/'IA' na captura de referencia. Camada entre o halo escuro e o texto; palavras nao-serifadas ficam invisiveis nessa camada para o layout da linha nao mudar."
+   }
   },
   "layout": {
    "max_width_pct_of_canvas": 0.82,
@@ -545,7 +564,9 @@
    "side_margin_pct": 0.09,
    "anchor_policy": "single_fixed",
    "anchor_fixed_top_pct": 0.55,
-   "anchor_note": "A referencia alterna 3 faixas (~52% inferior, ~40% rodape, ~9% superior), mas o usuario reclamou que a legenda 'do nada vai pra outra posicao e fica indo pros cantos'. PADRAO: posicao vertical UNICA em 0.55, todos os blocos, sempre centralizado. So variar se o usuario pedir."
+   "anchor_note": "A referencia alterna 3 faixas (~52% inferior, ~40% rodape, ~9% superior), mas o usuario reclamou que a legenda 'do nada vai pra outra posicao e fica indo pros cantos'. PADRAO: posicao vertical UNICA em 0.55, todos os blocos, sempre centralizado. So variar se o usuario pedir.",
+   "word_space_scale": 0.55,
+   "word_space_scale_note": "MEDIDO: gap entre palavras na referencia = 0.25-0.35 x-height (10-14px com x-height 40); com espaco cheio da Helvetica ficava 0.65. Encolher o espaco para 55% via \\\\fscx no proprio caractere de espaco."
   },
   "gaps": {
    "silent_gap_between_blocks_ms": [
@@ -816,6 +837,7 @@
   "smoother_effects": true,
   "images_required": true,
   "images_source": "apify_google_images",
-  "never_cut_while_speaking": true
+  "never_cut_while_speaking": true,
+  "caption_style_v21": "halo difuso no lugar de sombra dura; sans sempre Bold; serifado 1.55x; espaco entre palavras 55%; corpo tipico 6%"
  }
 }

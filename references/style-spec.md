@@ -160,11 +160,12 @@ Use `\alpha&HFF&\t(0,150,\alpha&H00&)` apenas na palavra que acabou de acender.
 
 | Papel | Fonte | Uso |
 |---|---|---|
-| `normal` | Helvetica Neue Regular (400) | texto corrente |
-| `strong` | Helvetica Neue Bold (700) | linha/trecho de peso |
+| `normal` | Helvetica Neue **Bold** (700) | texto corrente — **toda** palavra sem serifa é Bold |
+| `strong` | Helvetica Neue Bold (700) | igual ao normal (distinção morreu na v2.1) |
 | `accent` | **Playfair Display Italic (400)** | expressão-chave enfatizada |
 
-**A ênfase é por troca de família, não por cor.**
+**A ênfase é por troca de família, não por cor.** MEDIDO na captura de estilo: traço/x-height da
+sans = 0,225 e 0,209, contra 0,207 da HN Bold e 0,126 da Regular — a sans é **sempre Bold**.
 
 ### O serifado é composto MAIOR — e isso não é óbvio
 
@@ -177,14 +178,18 @@ praticamente **iguais**. Mas na referência os glifos do serifado aparecem **1,5
 | "Vem comigo" vs "fazer" | 31 px | 47 px | 1,52 |
 
 Ou seja: é **aumento deliberado do corpo**, não diferença de métrica. Use
-`accent_size_ratio = 1.45`. Sem esse fator a ênfase some visualmente.
+`accent_size_ratio = 1.55` (na captura de estilo o ratio medido foi 1,51–1,56). Sem esse fator
+a ênfase some visualmente.
 
 ### Métrica (medida)
 
-- Corpo: **~5,74% da altura do canvas** (mediana), faixa útil **4,55%–6,33%**.
-  Em 1920 de altura isso é **~110 px**, faixa 87–122.
+- Corpo: típico **6,0% da altura do canvas**, faixa útil **4,8%–7,2%** (mediana 5,74% nos 294
+  frames; a captura de estilo aprovada usa ~6,5%). Em 1920 de altura: ~115 px, faixa 92–138.
 - Entrelinha: **1,205×** o corpo.
 - Tracking **fechado**: −1,5 px em 1080 de largura (escalar proporcionalmente).
+- **Espaço entre palavras encolhido para 55%** (`word_space_scale`): na referência o vão entre
+  palavras é 0,25–0,35 x-height — com o espaço cheio da Helvetica ficava quase o dobro. Implementado
+  com `\fscx55` no próprio caractere de espaço.
 - Largura máxima do bloco: **82%** da largura; margem lateral **9%**.
 - **Linhas curtas**: mediana ~8 glifos por linha. 1–2 linhas por bloco.
 
@@ -198,11 +203,17 @@ palavras de destaque e o tracking. Nunca deixe linha estourar. O `build_plan.py`
 **`#FCF8F6`** — branco levemente quente, não `#FFFFFF` puro. Medido em 46 amostras de núcleo
 erodido sobre fundo escuro (mediana RGB 252, 248, 246).
 
-### Acabamento
-- Sem contorno (`outline`), sem tarja de fundo.
-- Sombra **4 px / blur 4 / alpha 0,85**. O relatório sugeria 2 px / 0,62 como "padrão seguro":
-  verificado em frame renderizado, com esse valor **o texto branco some sobre roupa clara ou sobre
-  as mãos**. Sobre fundo escuro a sombra continua imperceptível.
+### Acabamento — halo difuso + glow do serifado **[v2.1, medido + preferência do Gabriel]**
+- Sem contorno (`outline`), sem tarja de fundo, **sem sombra dura** — a sombra deslocada 4 px foi a
+  diferença mais visível contra o estilo real.
+- **Halo escuro difuso** (`soft_glow`): camada inferior com o mesmo texto, borda 8 px + blur 20 px,
+  preto a 48%, dy 2 px. MEDIDO na captura de estilo: a luminância do fundo cai ~24 níveis com pico a
+  ~13–16 px da borda e extensão ~30 px (escala 1080), quase simétrico. É esse halo que dá a
+  impressão de "glow/degradê" — nos glifos em si **não há gradiente** (delta ~4 níveis = compressão).
+- **Glow claro e curto só no serifado** (`accent_glow`): camada entre o halo e o texto, branco a
+  60%, borda 2,5 px + blur 6 px, apenas nas palavras Playfair — como em "agente"/"IA" da referência.
+  As demais palavras ficam invisíveis nessa camada para o layout da linha não mudar.
+- Cor de preenchimento **#FBF8F4** em todas as famílias.
 
 ### Posição **[preferência do Gabriel]**
 

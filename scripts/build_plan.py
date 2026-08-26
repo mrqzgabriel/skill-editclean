@@ -329,6 +329,8 @@ class TextMeasure(object):
         t = prof["captions"]["typography"]
         self.accent_ratio = t["accent_size_ratio"]
         self.track = t["tracking_px_at_reference"] * (W / 720.0)
+        self.sans_bold = bool(t.get("sans_always_bold"))
+        self.space_scale = float(prof["captions"]["layout"].get("word_space_scale", 1.0))
         self.cache = {}
         self.primary = t["font_primary"].get("path_hint") if isinstance(t.get("font_primary"), dict) else None
         self.primary = self.primary or "/System/Library/Fonts/HelveticaNeue.ttc"
@@ -346,7 +348,8 @@ class TextMeasure(object):
             if style == "accent":
                 f = ImageFont.truetype(self.accent, size)
             else:
-                f = ImageFont.truetype(self.primary, size, index=1 if style == "strong" else 0)
+                bold = (style == "strong") or self.sans_bold
+                f = ImageFont.truetype(self.primary, size, index=1 if bold else 0)
         except Exception:
             f = None
         self.cache[key] = f
@@ -366,7 +369,7 @@ class TextMeasure(object):
             nch += len(txt)
             if k:
                 fb = self.font("normal", fs)
-                tot += fb.getlength(" ") if fb else fs * 0.28
+                tot += (fb.getlength(" ") if fb else fs * 0.28) * self.space_scale
         return tot + self.track * nch
 
 
@@ -816,10 +819,16 @@ def main():
                         "footer": cap["layout"]["anchors"]["footer"]["bbox_top_pct"],
                         "upper": cap["layout"]["anchors"]["upper"]["bbox_top_pct"]},
             "max_width_pct": cap["layout"]["max_width_pct_of_canvas"],
-            "shadow": {"present": True,
+            "shadow": {"present": bool(cap["color"]["shadow"].get("present", False)),
                        "offset_px": cap["color"]["shadow"]["offset_px"],
                        "blur_px": cap["color"]["shadow"]["blur_px"],
                        "alpha": cap["color"]["shadow"]["alpha"]},
+            "soft_glow": {k: v for k, v in (cap["color"].get("soft_glow") or {}).items()
+                          if k != "note"},
+            "accent_glow": {k: v for k, v in (cap["color"].get("accent_glow") or {}).items()
+                            if k != "note"},
+            "word_space_scale": cap["layout"].get("word_space_scale", 1.0),
+            "sans_bold_always": bool(cap["typography"].get("sans_always_bold")),
             "outline": {"present": False, "width_px": 0},
             "primary_hex": cap["color"]["primary_hex"],
             "accent_hex": cap["color"]["accent_hex"],

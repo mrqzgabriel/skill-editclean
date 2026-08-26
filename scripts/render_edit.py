@@ -279,10 +279,12 @@ def _ass_escape(text):
 def build_ass(plan, out_path):
     """Gera o .ass com revelacao palavra a palavra e destaque por familia.
 
-    O corpo do texto e definido POR BLOCO (blk["font_size_px"]) e a familia de
-    destaque recebe um fator proprio (captions.accent_size_ratio): no material de
-    referencia o serifado e composto maior que o sem-serifa, embora as duas
-    familias tenham x-height praticamente igual no mesmo corpo.
+    Estilo v2.1 (medido na captura de referencia):
+      - toda palavra sem serifa e BOLD (traco/x-height 0.21-0.23 = HN Bold);
+      - o serifado e composto maior (accent_size_ratio);
+      - a "sombra" e um HALO escuro difuso desenhado numa camada inferior
+        (borda + blur alto, alpha moderado), nao uma sombra dura deslocada;
+      - espaco entre palavras encolhido via \\fscx no proprio espaco.
     """
     caps = plan["captions"]
     W = plan["output"]["width"]
@@ -290,18 +292,37 @@ def build_ass(plan, out_path):
 
     font_primary = caps.get("font_primary", "Helvetica Neue")
     font_accent = caps.get("font_accent", "Playfair Display")
-    base_size = int(caps.get("font_size_px") or max(16, round(H * 0.0574)))
+    base_size = int(caps.get("font_size_px") or max(16, round(H * 0.060)))
     accent_ratio = float(caps.get("accent_size_ratio", 1.0))
-    line_ratio = float(caps.get("line_height_ratio", 1.205))
+
+    sans_bold_always = bool(caps.get("sans_bold_always", False))
+    space_scale = float(caps.get("word_space_scale", 1.0))
+
+    glow = caps.get("soft_glow") or {}
+    glow_on = bool(glow.get("enabled"))
+    aglow = caps.get("accent_glow") or {}
+    aglow_on = bool(aglow.get("enabled"))
+    ag_alpha = max(0.0, min(1.0, float(aglow.get("alpha", 0.60))))
+    ag_a_hex = "%02X" % int(round((1.0 - ag_alpha) * 255))
+    ag_bord = float(aglow.get("bord_px", 2.5)) * (H / 1920.0)
+    ag_blur = float(aglow.get("blur_px", 6.0)) * (H / 1920.0)
+    ag_col = _ass_color(aglow.get("color", "#FFFFFF"))
+    g_alpha = max(0.0, min(1.0, float(glow.get("alpha", 0.45))))
+    g_a_hex = "%02X" % int(round((1.0 - g_alpha) * 255))
+    g_bord = float(glow.get("bord_px", 5.0)) * (H / 1920.0)
+    g_blur = float(glow.get("blur_px", 13.0)) * (H / 1920.0)
+    g_dy = float(glow.get("dy_px", 2.0)) * (H / 1920.0)
+    g_col = _ass_color(glow.get("color", "#000000"))
 
     sh = caps.get("shadow") or {}
-    shadow_depth = float(sh.get("offset_px", 2)) if sh.get("present", True) else 0.0
+    legacy_shadow = (not glow_on) and sh.get("present", False)
+    shadow_depth = float(sh.get("offset_px", 2)) if legacy_shadow else 0.0
     shadow_alpha = float(sh.get("alpha", 0.62))
     ol = caps.get("outline") or {}
     outline_w = float(ol.get("width_px", 0)) if ol.get("present") else 0.0
 
-    primary = _ass_color(caps.get("primary_hex", "#FFFFFF"))
-    accent_col = _ass_color(caps.get("accent_hex", caps.get("primary_hex", "#FFFFFF")))
+    primary = _ass_color(caps.get("primary_hex", "#FBF8F4"))
+    accent_col = _ass_color(caps.get("accent_hex", caps.get("primary_hex", "#FBF8F4")))
     back = _ass_color("#000000", 1.0 - shadow_alpha)
 
     anchors = caps.get("anchors") or {}
@@ -329,8 +350,9 @@ def build_ass(plan, out_path):
 
     margin_lr = int(W * side_margin)
     tracking = float(caps.get("tracking_px", -1))
+    normal_bold = 1 if sans_bold_always else 0
     for name, fontname, bold, italic, colour in (
-        ("Normal", font_primary, 0, 0, primary),
+        ("Normal", font_primary, normal_bold, 0, primary),
         ("Strong", font_primary, 1, 0, primary),
         ("Accent", font_accent, 0, 1, accent_col),
     ):
@@ -347,6 +369,45 @@ def build_ass(plan, out_path):
     ]
 
     style_of = {"normal": "Normal", "strong": "Strong", "accent": "Accent"}
+    joiner = " " if space_scale >= 0.999 else ("{\\fscx%d} {\\fscx100}" % int(round(space_scale * 100)))
+
+    def render_layer(words_state, n_lines, fs_block, fade, kind):
+        """Texto do estado atual do karaoke para uma camada ('glow' ou 'main')."""
+        parts_by_line = {}
+        last = len(words_state) - 1
+        for j, w2 in enumerate(words_state):
+            ln = int(w2.get("line", 0))
+            st = style_of.get(w2.get("style", "normal"), "Normal")
+            parts_by_line.setdefault(ln, []).append((st, _ass_escape(w2["text"]), j == last))
+        chunks = []
+        for ln in range(n_lines):
+            if ln not in parts_by_line:
+                continue
+            seg = []
+            for st, txt, is_new in parts_by_line[ln]:
+                size = int(round(fs_block * (accent_ratio if st == "Accent" else 1.0)))
+                if kind == "glow":
+                    decor = ("\\1c%s\\3c%s\\bord%.1f\\blur%.1f\\shad0\\1a&H%s&\\3a&H%s&"
+                             % (g_col, g_col, g_bord, g_blur, g_a_hex, g_a_hex))
+                    anim = ("\\1a&HFF&\\3a&HFF&\\t(0,%d,\\1a&H%s&\\3a&H%s&)"
+                            % (fade, g_a_hex, g_a_hex)) if (is_new and fade > 0) else ""
+                elif kind == "aglow":
+                    # glow CLARO e curto, so nas palavras serifadas; as outras
+                    # entram invisiveis para o layout da linha nao mudar
+                    if st == "Accent":
+                        decor = ("\\1c%s\\3c%s\\bord%.1f\\blur%.1f\\shad0\\1a&H%s&\\3a&H%s&"
+                                 % (ag_col, ag_col, ag_bord, ag_blur, ag_a_hex, ag_a_hex))
+                        anim = ("\\1a&HFF&\\3a&HFF&\\t(0,%d,\\1a&H%s&\\3a&H%s&)"
+                                % (fade, ag_a_hex, ag_a_hex)) if (is_new and fade > 0) else ""
+                    else:
+                        decor = "\\bord0\\shad0\\1a&HFF&\\3a&HFF&\\4a&HFF&"
+                        anim = ""
+                else:
+                    decor = ""
+                    anim = ("\\alpha&HFF&\\t(0,%d,\\alpha&H00&)" % fade) if (is_new and fade > 0) else ""
+                seg.append("{\\r%s\\fs%d%s%s}%s" % (st, size, decor, anim, txt))
+            chunks.append(joiner.join(seg))
+        return "\\N".join(chunks)
 
     for blk in caps.get("blocks", []):
         words = blk.get("words", [])
@@ -361,47 +422,32 @@ def build_ass(plan, out_path):
         else:
             an, pos_x = 8, W // 2
         n_lines = max(1, int(blk.get("lines", 1)))
+        fade = int(caps.get("entry_fade_ms", 150) or 0)
 
         for i, w in enumerate(words):
             start = float(w["start"])
             end = float(blk["end"]) if i == len(words) - 1 else float(words[i + 1]["start"])
             if end <= start:
                 continue
-
-            fade = int(caps.get("entry_fade_ms", 90) or 0)
-
-            parts_by_line = {}
-            for j, w2 in enumerate(words):
-                if j > i:
-                    break
-                ln = int(w2.get("line", 0))
-                st = style_of.get(w2.get("style", "normal"), "Normal")
-                parts_by_line.setdefault(ln, []).append((st, _ass_escape(w2["text"]), j == i))
-
-            chunks = []
-            for ln in range(n_lines):
-                if ln not in parts_by_line:
-                    continue
-                seg = []
-                for st, txt, is_new in parts_by_line[ln]:
-                    size = int(round(fs_block * (accent_ratio if st == "Accent" else 1.0)))
-                    # o fade vale SO para a palavra que acabou de acender; um \fad no
-                    # evento inteiro faria o bloco todo piscar a cada palavra, porque
-                    # cada estado do karaoke e um evento novo.
-                    anim = ("\\alpha&HFF&\\t(0,%d,\\alpha&H00&)" % fade) if (is_new and fade > 0) else ""
-                    seg.append("{\\r%s\\fs%d%s}%s" % (st, size, anim, txt))
-                chunks.append(" ".join(seg))
-            text = "\\N".join(chunks)
-            if not text:
+            state = words[:i + 1]
+            if glow_on:
+                text_g = render_layer(state, n_lines, fs_block, fade, "glow")
+                if text_g:
+                    lines.append(
+                        "Dialogue: 0,%s,%s,Normal,,0,0,0,,{\\an%d\\pos(%d,%d)}%s"
+                        % (_ass_time(start), _ass_time(end), an, pos_x, int(pos_y + g_dy), text_g))
+            if aglow_on and any(w.get("style") == "accent" for w in state):
+                text_a = render_layer(state, n_lines, fs_block, fade, "aglow")
+                if text_a:
+                    lines.append(
+                        "Dialogue: 1,%s,%s,Normal,,0,0,0,,{\\an%d\\pos(%d,%d)}%s"
+                        % (_ass_time(start), _ass_time(end), an, pos_x, pos_y, text_a))
+            text_m = render_layer(state, n_lines, fs_block, fade, "main")
+            if not text_m:
                 continue
-
-            # entrelinha: \fsp nao muda o leading, entao usamos \fs do estilo base
-            pos_tag = "{\\an%d\\pos(%d,%d)}" % (an, pos_x, pos_y)
-
             lines.append(
-                "Dialogue: 0,%s,%s,Normal,,0,0,0,,%s%s"
-                % (_ass_time(start), _ass_time(end), pos_tag, text)
-            )
+                "Dialogue: 2,%s,%s,Normal,,0,0,0,,{\\an%d\\pos(%d,%d)}%s"
+                % (_ass_time(start), _ass_time(end), an, pos_x, pos_y, text_m))
 
     with open(out_path, "w", encoding="utf-8") as fh:
         fh.write("\n".join(lines) + "\n")
