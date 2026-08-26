@@ -1,6 +1,6 @@
 {
  "profile_name": "EditClean",
- "profile_version": "2.1.1",
+ "profile_version": "2.1.2",
  "derived_from": "ANALISE_TECNICA_EDICAO_VIDEO_REFERENCIA.md + medicao direta de 294 frames de 'Edit Pro/Video referencia.mp4' + preferencias do usuario (ver user_overrides)",
  "reference_material": {
   "duration_s": 152.2,
@@ -533,7 +533,7 @@
    "anchors": {
     "lower_default": {
      "share": 0.7,
-     "bbox_top_pct": 0.59,
+     "bbox_top_pct": 0.62,
      "center_y_pct": 0.635,
      "description": "faixa inferior-central, padrao do video",
      "share_origin": "estimativa qualitativa: o relatorio diz que a ancora inferior vale 'na maior parte do video'. Nao e frequencia medida - o catalogo de 6 instancias e amostra de VARIACAO (2/2/2), nao de frequencia."
@@ -563,8 +563,8 @@
    "alignment_note": "A referencia mistura centro (45%) e esquerda (25%), mas o usuario pediu explicitamente TUDO centralizado. Preferencia do usuario prevalece: nao usar alinhamento a esquerda.",
    "side_margin_pct": 0.09,
    "anchor_policy": "single_fixed",
-   "anchor_fixed_top_pct": 0.55,
-   "anchor_note": "A referencia alterna 3 faixas (~52% inferior, ~40% rodape, ~9% superior), mas o usuario reclamou que a legenda 'do nada vai pra outra posicao e fica indo pros cantos'. PADRAO: posicao vertical UNICA em 0.55, todos os blocos, sempre centralizado. So variar se o usuario pedir.",
+   "anchor_fixed_top_pct": 0.62,
+   "anchor_note": "A referencia alterna 3 faixas (~52% inferior, ~40% rodape, ~9% superior), mas o usuario reclamou que a legenda 'do nada vai pra outra posicao e fica indo pros cantos'. PADRAO: posicao vertical UNICA, todos os blocos, sempre centralizado. Valor 0.62 (26/08): em 0.55 a legenda encostava no queixo quando a pessoa inclina a cabeca - MEDIDO em 11 frames, o queixo desce ate ~0.53. Ao adaptar para outro video, medir onde o queixo desce mais e deixar ~0.08-0.10 de folga; conferir que a base do bloco de 2 linhas nao passa de 0.80.",
    "word_space_scale": 0.55,
    "word_space_scale_note": "MEDIDO: gap entre palavras na referencia = 0.25-0.35 x-height (10-14px com x-height 40); com espaco cheio da Helvetica ficava 0.65. Encolher o espaco para 55% via \\\\fscx no proprio caractere de espaco."
   },

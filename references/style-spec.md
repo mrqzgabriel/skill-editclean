@@ -223,11 +223,15 @@ centro (45%) com esquerda (25%).
 **O Gabriel não quer isso.** Reclamou que a legenda "do nada vai pra outra posição e fica indo pros
 cantos". O padrão é:
 
-- **posição vertical única**: topo do bloco em **0,55** da altura, em todos os blocos;
+- **posição vertical única**: topo do bloco em **0,62** da altura, em todos os blocos;
 - **sempre centralizado**.
 
 A única variação que resta é o bloco crescer para baixo quando entra a segunda linha — isso é o
 karaokê funcionando, não deslocamento.
+
+**Como escolher o valor em outro vídeo:** meça em vários frames onde o **queixo desce mais** (a
+pessoa se inclina ao falar) e deixe 0,08–0,10 de folga abaixo disso. No IMG_1171 o queixo chega a
+0,53, daí 0,62. Confira também que a base do bloco de 2 linhas no corpo máximo não passe de ~0,80.
 
 Só use âncora diferente se o usuário pedir, ou se uma **inserção gráfica** ocupar a mesma faixa
 naquele instante (aí a legenda sai da frente).
