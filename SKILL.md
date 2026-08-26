@@ -189,11 +189,13 @@ Regras:
    comercial. Print com nome borrado pelo blog também sai: fica com cara de censura.
 4. **Recorte marcas de terceiros** — e principalmente de **concorrentes do usuário** (seria péssimo
    mostrar concorrente no VSL dele). Recortar a região útil quase sempre resolve.
-5. **Proporção ≥ ~1,15:1.** A faixa útil tem altura travada (~15% do canvas), então a largura sai da
-   proporção — e precisa alcançar o mínimo de 0,31 da largura. Print de celular **em pé** renderiza
-   com ~13% da largura e fica ilegível: recorte uma faixa horizontal, ou procure foto do aparelho na
-   mão/na mesa. Posicione conforme `graphics_overlays.safe_margins`: 3,5% de respiro no topo,
-   largura ≤ 86%, e a **base acima da cabeça** — o limite vem do `subject.json`.
+5. **Proporção: entregue a imagem próxima de 2:1 e não pré-recorte em panorâmica.** Com o
+   push-down (padrão, ver §6) a faixa útil cresce ~2×; o renderer faz *cover* na caixa (~0,825 da
+   largura × faixa) e corta só o excesso centrado. Uma 16:9 perde ~10% da altura; uma 5:1 pré-
+   recortada perderia mais da metade da largura à toa. Print de celular **em pé** continua fora
+   (recorte uma faixa horizontal, ou foto do aparelho na mão/na mesa); o mínimo continua ≥ ~1,15:1.
+   Margens conforme `graphics_overlays.safe_margins`: 3,5% de respiro no topo, largura ≤ 86% — e no
+   modo clássico (`--no-push`) a **base fica acima da cabeça**, limite do `subject.json`.
 6. Se nada pertinente aparecer, **omita a inserção** e registre em `limitations`. Nunca use asset
    genérico de preenchimento.
 7. **Avise o usuário no resumo final** que essas imagens têm direitos autorais. E quando o assunto
@@ -221,7 +223,15 @@ O script já aplica **todas** as regras do perfil e imprime um relatório confer
 - escalas de zoom com salto garantido em cada corte, mais os **padrões dinâmicos** (punch-in cut
   com volta suave, punch com reabertura por corte, push lento no respiro — ver spec §5);
 - blocos de legenda com quebra automática, corpo por bloco e **posição única centralizada**;
-- timeline já descontando o encurtamento do `xfade`.
+- timeline já descontando o encurtamento do `xfade`;
+- **push-down nas inserções (padrão desde a v2.5, pedido do Gabriel 26/08 — "arrastar o vídeo pra
+  baixo e mostrar a imagem melhor")**: o vídeo desliza ~13% para baixo (rampa smoothstep de 0,35 s),
+  abre palco preto no topo e a imagem aparece ~2× maior; as legendas **descem junto** porque o
+  efeito é aplicado depois delas no filtergraph — nunca trocam de âncora. O script calcula a
+  distância pelo fundo real da legenda + reserva de 11,5% para a UI do Reels, alinha as janelas a
+  fronteiras de bloco de legenda, foge de transições, e a imagem só acende **depois** da descida
+  completa (senão cruza a cabeça em movimento). `--no-push` desliga; sem folga vertical o script
+  avisa e cai sozinho no top_band clássico. Confira no relatório a linha `push-down`.
 
 **Confira o relatório contra o perfil.** Se algum número destoar muito, ajuste e rode de novo.
 

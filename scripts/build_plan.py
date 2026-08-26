@@ -759,6 +759,8 @@ def main():
     ap.add_argument("--aspect", default="keep")
     ap.add_argument("--quality", default="high", choices=["draft", "high"])
     ap.add_argument("--overlays", default=None, help="JSON com as insercoes escolhidas")
+    ap.add_argument("--no-push", action="store_true",
+                    help="desliga o push-down (video descendo para a insercao aparecer maior)")
     ap.add_argument("--accent", default=None, help="JSON {accent:[idx], strong:[idx]}")
     ap.add_argument("--head", type=float, default=None)
     ap.add_argument("--tail", type=float, default=None)
@@ -974,11 +976,117 @@ def main():
                 "evidence": o.get("why", ""), "confidence": 74, "origin": "inferred",
             })
 
+    # ---- push-down (padrao v2.5): o video desce e abre palco para a insercao.
+    # Aplicado no render DEPOIS das legendas -- elas descem junto, sem trocar de
+    # ancora. Janelas alinhadas a fronteira de bloco de legenda e fora de
+    # transicao; a imagem so entra em fade depois da descida completa.
+    push_plan = None
+    pd_cfg = (prof.get("graphics_overlays") or {}).get("push_down") or {}
+    if overlays and blocks and pd_cfg.get("enabled_default", True) and not args.no_push:
+        lh = prof["captions"]["typography"]["line_height_ratio"]
+        # fundo real do texto: ancora + linhas + folga p/ descensor do serifado
+        text_bottom = max(anchor_pct * H + b["lines"] * b["font_size_px"] * lh
+                          + 0.35 * b["font_size_px"] for b in blocks)
+        ceiling = H * (1.0 - float(pd_cfg.get("ui_reserve_pct", 0.115)))
+        D = int(round(min(H * float(pd_cfg.get("dist_max_pct", 0.16)),
+                          ceiling - text_bottom)))
+        ramp = float(pd_cfg.get("ramp_s", 0.35))
+        if D < int(pd_cfg.get("dist_min_px", 100)):
+            print("[plan] push-down desligado: legenda desce ate %.0fpx, folga D=%dpx "
+                  "e menor que o minimo" % (text_bottom, D))
+        else:
+            trs = [(t["start"], t["end"]) for t in transitions]
+
+            def _clear_fwd(t0, t1):
+                for ta, tb in trs:
+                    if t0 < tb and ta < t1:
+                        d = tb + 0.005 - t0
+                        t0 += d
+                        t1 += d
+                return t0, t1
+
+            def _snap_start(t):
+                # fronteira de bloco mais proxima (empate prefere a mais tarde);
+                # nunca desloca mais que 0.45s
+                for b in blocks:
+                    if b["start"] - 1e-6 <= t < b["end"]:
+                        d1, d2 = t - b["start"], b["end"] - t
+                        cand = b["end"] if (d2 < d1 or abs(d1 - d2) < 0.1) else b["start"]
+                        return cand if abs(cand - t) <= 0.45 else t
+                return t
+
+            def _snap_end(t):
+                for b in blocks:
+                    if b["start"] - 1e-6 <= t < b["end"]:
+                        return b["end"] if (b["end"] - t) <= 0.6 else t
+                return t
+
+            sm2 = prof["graphics_overlays"]["safe_margins"]
+            bl2 = sm2["bottom_limit_pct"]
+            if (subj or {}).get("detected"):
+                bl2 = subj["derived"]["overlay_bottom_limit_pct"]
+            base_strip = (bl2 - sm2["top_pct"]) * H
+            bh = int(base_strip + D) // 2 * 2
+            bw_box = int(W * float(pd_cfg.get("box_width_pct", 0.825))) // 2 * 2
+            maxcrop = float(pd_cfg.get("max_vertical_crop", 0.25))
+
+            windows = []
+            for ov in overlays:
+                a0 = max(0.9, _snap_start(ov["start"]))
+                a0, _ = _clear_fwd(a0, a0 + ramp)
+                up_end = _snap_end(ov["end"])
+                changed = True
+                while changed:      # bloco nascendo dentro da subida empurra o fim
+                    changed = False
+                    for b in blocks:
+                        if up_end - ramp - 1e-6 < b["start"] < up_end - 1e-6:
+                            up_end, changed = b["end"], True
+                up_end = min(up_end, total)
+                img_st, img_en = a0 + ramp, up_end - ramp
+                if img_en - img_st < 0.7:
+                    print("[plan] %s: janela curta demais para push (%.2fs), "
+                          "fica no top_band" % (ov["id"], img_en - img_st))
+                    continue
+                try:
+                    from PIL import Image
+                    iw2, ih2 = Image.open(ov["params"]["path"]).size
+                    a_img = iw2 / float(ih2)
+                except Exception:
+                    a_img = bw_box / float(bh)
+                a_box = bw_box / float(bh)
+                if a_img >= a_box * (1.0 - maxcrop):
+                    bw_i = bw_box          # cover: corte vertical <= maxcrop
+                else:
+                    bw_i = max(int(0.31 * W), int(bh * a_img / (1.0 - maxcrop))) // 2 * 2
+                ov["params"]["mode"] = "push_down"
+                ov["params"]["box"] = {"w_px": bw_i, "h_px": bh}
+                ov["params"]["pos"] = {"x_pct": round((1 - bw_i / float(W)) / 2, 4),
+                                       "y_pct": sm2["top_pct"],
+                                       "w_pct": round(bw_i / float(W), 4)}
+                ov["params"]["corner_radius_pct"] = 0.03
+                ov["start"], ov["end"] = round(img_st, 4), round(img_en, 4)
+                ov["duration"] = round(img_en - img_st, 4)
+                windows.append([round(a0, 4), round(up_end, 4)])
+
+            if windows:
+                windows.sort()
+                merged = [windows[0]]
+                for a0, b0 in windows[1:]:   # janelas coladas viram uma so
+                    if a0 < merged[-1][1] + 0.4:
+                        merged[-1][1] = max(merged[-1][1], b0)
+                    else:
+                        merged.append([a0, b0])
+                push_plan = {"enabled": True, "dist_px": D, "ramp_s": ramp,
+                             "origin": "inferred",
+                             "windows": [{"down_start": a0, "up_end": b0}
+                                         for a0, b0 in merged]}
+
     # legenda nunca sob uma insercao no topo
     for blk in blocks:
         if blk["anchor"] != "upper":
             continue
-        if any(blk["start"] < o["end"] and o["start"] < blk["end"] for o in overlays):
+        if any(blk["start"] < o["end"] and o["start"] < blk["end"] for o in overlays
+               if (o.get("params") or {}).get("mode") != "push_down"):
             blk["anchor"] = "lower_default"
 
     cuts, n = [], 0
@@ -1085,6 +1193,9 @@ def main():
                   "confidence": 50, "origin": "inferred"},
     }
 
+    if push_plan:
+        plan["push_down"] = push_plan
+
     out = args.out or os.path.join(args.work, "edit-plan.json")
     with open(out, "w", encoding="utf-8") as fh:
         json.dump(plan, fh, indent=1, ensure_ascii=False)
@@ -1125,6 +1236,12 @@ def main():
                   % (sg["id"], zz["preset_id"], zz["scale_from"], zz["scale_to"],
                      zz["duration"], sg["duration"], sg["out_start"]))
     print("insercoes        : %d (%.1f/min)" % (len(overlays), len(overlays) / mins))
+    if push_plan:
+        print("push-down        : desce %dpx, rampa %.2fs, %d janela(s)"
+              % (push_plan["dist_px"], push_plan["ramp_s"], len(push_plan["windows"])))
+        for w in push_plan["windows"]:
+            print("   video baixo em %.2f -> %.2f s" % (w["down_start"], w["up_end"]))
+
     print("plano            : %s" % out)
     return 0
 

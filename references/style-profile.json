@@ -1,6 +1,6 @@
 {
  "profile_name": "EditClean",
- "profile_version": "2.4.0",
+ "profile_version": "2.5.0",
  "derived_from": "ANALISE_TECNICA_EDICAO_VIDEO_REFERENCIA.md + medicao direta de 294 frames de 'Edit Pro/Video referencia.mp4' + preferencias do usuario (ver user_overrides)",
  "reference_material": {
   "duration_s": 152.2,
@@ -729,7 +729,17 @@
    "aspect_note": "A faixa util fica entre top_pct e o head_top medido -- tipicamente ~15% da altura do canvas. Como a altura e travada, a LARGURA da insercao sai da proporcao da imagem, e ela precisa chegar ao minimo de 0.31 da largura do canvas. Isso exige proporcao >= ~1.15:1. PRINT DE CELULAR EM PE NAO SERVE: a 0.46:1 ele renderiza com ~13% da largura, ilegivel. Preferir imagem horizontal (1.6:1 a 3:1); de um print vertical, recortar uma FAIXA horizontal com a parte que comunica, ou procurar foto do aparelho na mao/na mesa, que ja vem deitada."
   },
   "placement_default": "top_band",
-  "caption_collision_rule": "Legenda nunca na faixa ocupada por uma insercao no mesmo instante. Verificar sobreposicao temporal e mover a legenda."
+  "caption_collision_rule": "Legenda nunca na faixa ocupada por uma insercao no mesmo instante. Verificar sobreposicao temporal e mover a legenda.",
+  "push_down": {
+   "enabled_default": true,
+   "ramp_s": 0.35,
+   "ui_reserve_pct": 0.115,
+   "dist_max_pct": 0.16,
+   "dist_min_px": 100,
+   "box_width_pct": 0.825,
+   "max_vertical_crop": 0.25,
+   "note": "Padrao desde 26/08 (aprovado no IMG_1184 v2): o video desliza para baixo (smoothstep, rampa 0.35s) e a insercao aparece numa faixa ~2:1 em vez de 5:1. dist = min(0.16*H, H*(1-ui_reserve) - fundo_real_da_legenda); ui_reserve segura a UI do Reels. Janelas alinhadas a fronteira de bloco de legenda e fora de transicao; a imagem entra em fade SO depois da descida completa. Legendas descem junto porque o push e aplicado DEPOIS delas no filtergraph. Se a folga der menos que dist_min_px, cai no top_band antigo."
+  }
  },
  "opening": {
   "mechanism": "blur_transition_with_zoom_out",
@@ -908,6 +918,8 @@
   "images_must_be_real": true,
   "images_must_be_real_note": "Pedido do usuario 26/08 ('imagem do whatsapp real mesmo como ele e e nao uma edit ou feito com IA, ou imagem feita no photoshop'). SO print de tela ou FOTOGRAFIA real. Estao PROIBIDOS: mockup vetorial, render 3D de celular, arte generativa e composicao de Photoshop -- mesmo os bem-feitos, mesmo os que 'parecem' o app. Sinais de mockup: 'Lorem ipsum', baloes uniformes repetidos, avatares como circulo chapado, horario 09:41 ou 12:30 repetido em todos os paineis, fundo colorido chapado atras do aparelho, 'template'/'UI kit'/'PSD'/'IMAGE NOT INCLUDED'. Sinais de print real: barra de status com hora/bateria/operadora, fotos de perfil de pessoas de verdade, textos de tamanhos irregulares, horarios variados, imperfeicao de foto de tela.",
   "images_no_identifiable_private_people": true,
-  "images_no_identifiable_private_people_note": "Descartar print real que exponha NOME + FOTO de pessoa privada identificavel (lista de conversas com contatos reais, por exemplo). Num video comercial isso e risco -- ha decisao do STJ sobre divulgacao de print de conversa de WhatsApp. Preferir print sem nome visivel, ou recortar. Nao confundir com 'nome borrado pelo blog', que fica com cara de censura e tambem deve ser evitado por estetica."
+  "images_no_identifiable_private_people_note": "Descartar print real que exponha NOME + FOTO de pessoa privada identificavel (lista de conversas com contatos reais, por exemplo). Num video comercial isso e risco -- ha decisao do STJ sobre divulgacao de print de conversa de WhatsApp. Preferir print sem nome visivel, ou recortar. Nao confundir com 'nome borrado pelo blog', que fica com cara de censura e tambem deve ser evitado por estetica.",
+  "insertion_push_down": true,
+  "insertion_push_down_note": "Pedido 26/08 no IMG_1184: 'as imagens ... ficaram cortadas, o que acha de arrastar o video pra baixo e mostrar a imagem melhor'. Entregue e aprovado ('Ficou otimo!'). E o modo padrao de insercao; --no-push desliga. Imagens de origem devem chegar PROXIMAS de 2:1 (nao pre-recortar em 5:1: o renderer faz cover na caixa)."
  }
 }

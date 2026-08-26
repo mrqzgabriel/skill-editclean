@@ -753,10 +753,13 @@ def build_filtergraph(plan, ass_path=None, overlay_inputs=None):
             parts.append("[%s]%s[%s]" % (cur_v, ",".join(chain), nv))
             cur_v = nv
 
-    # ---- 6. overlays de imagem
+    # ---- 6. overlays de imagem (modo classico top_band; os push_down vao
+    #         DEPOIS das legendas, na secao 7.5)
     ov_list = plan.get("overlays", []) or []
     for idx, ov in enumerate(ov_list):
         p = ov.get("params") or {}
+        if p.get("mode") == "push_down":
+            continue
         input_index = overlay_inputs[idx] if overlay_inputs else None
         if input_index is None:
             continue
@@ -821,6 +824,70 @@ def build_filtergraph(plan, ass_path=None, overlay_inputs=None):
             % (cur_v, _esc_path_for_filter(ass_path), _esc_path_for_filter(FONTS_DIR), nv)
         )
         cur_v = nv
+
+    # ---- 7.5 push-down: o video (com as legendas JA queimadas) desliza para
+    #          baixo sobre fundo preto e abre palco no topo para a insercao
+    #          aparecer maior. Vem DEPOIS das legendas de proposito: elas descem
+    #          junto com o video e nunca trocam de ancora. As imagens do push
+    #          entram por cima do conjunto ja deslocado.
+    pd = plan.get("push_down") or {}
+    push_ovs = [(i, o) for i, o in enumerate(ov_list)
+                if (o.get("params") or {}).get("mode") == "push_down"]
+    if pd.get("enabled") and pd.get("windows") and push_ovs:
+        D = int(pd.get("dist_px", 0))
+        ramp = max(0.05, float(pd.get("ramp_s", 0.35)))
+        terms = []
+        for w in pd["windows"]:
+            for sgn, t0 in (("+", float(w["down_start"])),
+                            ("-", float(w["up_end"]) - ramp)):
+                c = "clip((t-%.4f)/%.4f,0,1)" % (t0, ramp)
+                terms.append("%spow(%s,2)*(3-2*%s)" % (sgn, c, c))
+        expr = "round(%d*(0%s))" % (D, "".join(terms))
+        parts.append("color=c=black:s=%dx%d:r=%s[pdbg]" % (W, H, fps))
+        nv = "vpush"
+        parts.append("[pdbg][%s]overlay=x=0:y='%s':eval=frame:shortest=1:"
+                     "format=auto[%s]" % (cur_v, expr, nv))
+        cur_v = nv
+        for idx, ov in push_ovs:
+            input_index = overlay_inputs[idx] if overlay_inputs else None
+            if input_index is None:
+                continue
+            p = ov.get("params") or {}
+            box = p.get("box") or {}
+            bw = even(int(box.get("w_px", W * 0.825)))
+            bh = even(int(box.get("h_px", H * 0.23)))
+            ox = int(round((W - bw) / 2.0))
+            oy = int(round(H * float((p.get("pos") or {}).get("y_pct", 0.035))))
+            st, en = float(ov["start"]), float(ov["end"])
+            entry_ms = float(p.get("entry_ms", 300)) / 1000.0
+            exit_ms = float(p.get("exit_ms", 300)) / 1000.0
+            rad = max(1.0, float(p.get("corner_radius_pct", 0.03)) * min(bw, bh))
+            lbl = "pov%d" % idx
+            # cover: preenche a caixa cortando o excesso centrado (a caixa ja
+            # foi dimensionada no plano para o corte ficar pequeno). Mesmo
+            # padrao da secao 6: frame unico + filtro loop, nunca -loop 1.
+            chain = ["scale=%d:%d:force_original_aspect_ratio=increase:flags=lanczos"
+                     % (bw, bh),
+                     "crop=%d:%d" % (bw, bh),
+                     "format=rgba",
+                     "geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='if("
+                     "gt(hypot(max(0,max({r}-X,X-(W-{r}))),max(0,max({r}-Y,Y-(H-{r})))),{r}),0,alpha(X,Y))'"
+                     .format(r=rad)]
+            n_frames = max(2, int(math.ceil((en - st) * float(fps))) + 2)
+            chain.append("loop=loop=%d:size=1:start=0" % n_frames)
+            chain.append("setpts=N/%s/TB" % fps)
+            if entry_ms > 0:
+                chain.append("fade=t=in:st=0:d=%.3f:alpha=1" % entry_ms)
+            if exit_ms > 0:
+                chain.append("fade=t=out:st=%.3f:d=%.3f:alpha=1"
+                             % (max(0.0, (en - st) - exit_ms), exit_ms))
+            chain.append("setpts=PTS+%.4f/TB" % st)
+            parts.append("[%d:v]%s[%s]" % (input_index, ",".join(chain), lbl))
+            nv = "vpov%d" % idx
+            parts.append("[%s][%s]overlay=%d:%d:enable='between(t,%.4f,%.4f)':"
+                         "eof_action=pass:shortest=0:format=auto[%s]"
+                         % (cur_v, lbl, ox, oy, st, en, nv))
+            cur_v = nv
 
     # ---- 8. encerramento
     cl = plan.get("closing") or {}

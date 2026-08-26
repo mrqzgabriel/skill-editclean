@@ -994,6 +994,29 @@
         "type": "number",
         "minimum": 0,
         "maximum": 0.5
+       },
+       "mode": {
+        "type": "string",
+        "enum": [
+         "top_band",
+         "push_down"
+        ],
+        "description": "push_down = renderizada depois das legendas, sobre o video deslocado"
+       },
+       "box": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+         "w_px": {
+          "type": "integer",
+          "minimum": 2
+         },
+         "h_px": {
+          "type": "integer",
+          "minimum": 2
+         }
+        },
+        "description": "caixa final da insercao no modo push_down (cover com corte centrado)"
        }
       }
      }
@@ -1177,6 +1200,55 @@
     },
     "origin": {
      "$ref": "#/definitions/measured"
+    }
+   }
+  },
+  "push_down": {
+   "type": "object",
+   "description": "Efeito push-down: o video (com legendas ja queimadas) desliza para baixo e abre palco no topo para a insercao aparecer maior. Aplicado DEPOIS das legendas no render, para elas descerem junto.",
+   "additionalProperties": false,
+   "required": [
+    "enabled",
+    "dist_px",
+    "ramp_s",
+    "windows"
+   ],
+   "properties": {
+    "enabled": {
+     "type": "boolean"
+    },
+    "dist_px": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "ramp_s": {
+     "type": "number",
+     "minimum": 0.05,
+     "maximum": 1.0
+    },
+    "origin": {
+     "$ref": "#/definitions/measured"
+    },
+    "windows": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "down_start",
+       "up_end"
+      ],
+      "properties": {
+       "down_start": {
+        "type": "number",
+        "minimum": 0
+       },
+       "up_end": {
+        "type": "number",
+        "minimum": 0
+       }
+      }
+     }
     }
    }
   }
