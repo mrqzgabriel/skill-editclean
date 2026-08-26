@@ -1,0 +1,751 @@
+{
+  "profile_name": "EditClean",
+  "profile_version": "1.0.0",
+  "derived_from": "ANALISE_TECNICA_EDICAO_VIDEO_REFERENCIA.md",
+  "reference_material": {
+    "duration_s": 152.2,
+    "frames": 4566,
+    "resolution": "720x1280",
+    "fps": 30,
+    "note": "Todos os parametros abaixo sao NORMALIZADOS (proporcoes, taxas por minuto, fracoes do canvas). Timestamps absolutos do video de referencia NAO devem ser reutilizados.",
+    "font_provenance": "As familias tipograficas NAO vem do relatorio: foram identificadas pelo usuario olhando um frame do proprio video (Helvetica Neue Regular/Bold + Playfair Display Italic 400). O relatorio so tinha estimativas (Arial/Georgia/Times/Bodoni) com confianca 46-68. A identificacao do usuario prevalece."
+  },
+  "canvas": {
+    "aspect_default": "9:16",
+    "aspect_supported": [
+      "keep",
+      "9:16",
+      "1:1",
+      "16:9"
+    ],
+    "reference_resolution": {
+      "w": 720,
+      "h": 1280
+    },
+    "target_resolution_by_aspect": {
+      "9:16": {
+        "w": 1080,
+        "h": 1920
+      },
+      "1:1": {
+        "w": 1080,
+        "h": 1080
+      },
+      "16:9": {
+        "w": 1920,
+        "h": 1080
+      }
+    },
+    "fps_policy": "preserve_source",
+    "fps_reference": 30,
+    "pixel_format": "yuv420p",
+    "color_range": "tv",
+    "color_space": "bt709",
+    "confidence": 98
+  },
+  "rhythm": {
+    "boundary_events_per_minute": 26.0,
+    "boundary_events_per_minute_range": [
+      18.0,
+      34.0
+    ],
+    "shot_duration_ms": {
+      "median": 1283,
+      "mean": 1729,
+      "p25": 725,
+      "p75": 2208,
+      "min_observed": 67,
+      "max_observed": 12500,
+      "stddev": 1687,
+      "basis": "88 planos brutos do detector de sinal (antes da reconciliacao visual)",
+      "mean_reconciled_67_planos": 2272,
+      "note": "A distribuicao (mediana/quartis) vem dos 88 planos brutos. Com os 67 planos REAIS a media sobe para ~2272 ms (152.2s/67). Use a taxa boundary_events_per_minute como fonte primaria de cadencia; a distribuicao serve so para a FORMA (mediana bem abaixo da media, poucos planos muito longos)."
+    },
+    "shot_duration_target_ms": {
+      "min": 800,
+      "typical": 1300,
+      "max": 4500
+    },
+    "long_pause_shot": {
+      "allowed": true,
+      "max_per_video": 1,
+      "duration_ms_range": [
+        5000,
+        12500
+      ],
+      "placement": "middle_third",
+      "note": "O video de referencia tem exatamente um plano-respiro muito longo no terco central."
+    },
+    "pacing_curve": {
+      "first_third_events_per_minute": 46.0,
+      "middle_third_events_per_minute": 21.0,
+      "last_third_events_per_minute": 35.0,
+      "shape": "abertura_rapida -> respiro_central -> reaceleracao_parcial",
+      "note": "Os valores 46/21/35 por minuto sao do detector bruto e nao sao compativeis com os 26.0/min reconciliados. O que deve ser reproduzido e a RAZAO entre os tercos (1 : 0,46 : 0,76), aplicada sobre boundary_events_per_minute.",
+      "basis": "detector bruto (88 planos); use como PROPORCAO entre tercos, nao como valor absoluto",
+      "ratio_between_thirds": {
+        "first": 1.0,
+        "middle": 0.46,
+        "last": 0.76
+      }
+    },
+    "audio_sync": {
+      "cut_on_audio_transient_rate": 0.333,
+      "tolerance_ms": 120,
+      "policy": "edicao_guiada_por_fala_e_gesto",
+      "note": "Cortar preferencialmente em fronteira de fala/gesto, NAO na batida. Apenas ~1/3 dos cortes coincide com transiente sonoro.",
+      "rate_by_third": {
+        "first": 0.36,
+        "middle": 0.61,
+        "last": 0.13
+      },
+      "rate_by_third_note": "No respiro central os poucos cortes tendem a cair em transiente; na reaceleracao final quase nenhum. Cortar mais 'na batida' no miolo, menos no fecho."
+    },
+    "confidence": 90
+  },
+  "cuts": {
+    "hard_cut_share": 0.864,
+    "transition_share": 0.136,
+    "dominant_type": "jump_cut",
+    "types": {
+      "jump_cut": {
+        "share": 0.81,
+        "duration_frames": 1
+      },
+      "corte_seco": {
+        "share": 0.19,
+        "duration_frames": 1
+      }
+    },
+    "same_scene_policy": "manter mesmo enquadramento e cenario atraves do corte; o corte troca pose/gesto, nao o plano",
+    "motion_blur_at_cut_rate": 0.333,
+    "confidence": 90,
+    "mini_transition_share": 0.07,
+    "mini_transition_note": "4 dos 57 cortes (C014, C037, C042, C056) sao blur_transition/dissolve de ~1 frame, com efeito aplicado. Somados as 9 transicoes, o total real e 3 blur_transition e 3 dissolve no video."
+  },
+  "transitions": {
+    "events_per_minute": 3.5,
+    "max_share_of_boundaries": 0.15,
+    "duration_ms": {
+      "min": 100,
+      "median": 167,
+      "max": 367,
+      "mean": 193
+    },
+    "duration_frames": {
+      "min": 3,
+      "median": 5,
+      "max": 11
+    },
+    "mix": {
+      "wipe": 0.333,
+      "whip_pan": 0.222,
+      "blur_transition": 0.111,
+      "fade_in": 0.111,
+      "fade_out": 0.111,
+      "dissolve": 0.111
+    },
+    "easing_observed": [
+      "ease_out",
+      "linear",
+      "indeterminado"
+    ],
+    "placement_rule": "uso pontual, nunca recorrente a cada corte",
+    "confidence": 88,
+    "easing_mix": {
+      "ease_out": 0.556,
+      "linear": 0.222,
+      "indeterminado": 0.222
+    }
+  },
+  "zooms": {
+    "events_per_minute": 24.0,
+    "short_event_share": 0.967,
+    "short_event_max_ms": 333,
+    "scale_delta_pct_mean": 2.2,
+    "scale_delta_pct_range": [
+      1.0,
+      8.0
+    ],
+    "types": {
+      "continuo": 0.72,
+      "punch_in": 0.28
+    },
+    "direction_mix": {
+      "zoom_out": 0.623,
+      "zoom_in": 0.344,
+      "indeterminado": 0.033
+    },
+    "anchor_default": "center",
+    "anchor_options": [
+      "center",
+      "subject_face"
+    ],
+    "optical_or_digital": "digital_ou_indeterminado",
+    "easing_default": "linear",
+    "easing_options": [
+      "linear",
+      "ease_out",
+      "ease_in_out"
+    ],
+    "presets": [
+      {
+        "id": "punch_in_subtle",
+        "direction": "in",
+        "scale_from": 1.0,
+        "scale_to": 1.03,
+        "duration_ms": 300,
+        "easing": "ease_out",
+        "anchor": "subject_face"
+      },
+      {
+        "id": "punch_in_medium",
+        "direction": "in",
+        "scale_from": 1.0,
+        "scale_to": 1.05,
+        "duration_ms": 330,
+        "easing": "ease_out",
+        "anchor": "subject_face"
+      },
+      {
+        "id": "drift_out_subtle",
+        "direction": "out",
+        "scale_from": 1.02,
+        "scale_to": 1.0,
+        "duration_ms": 300,
+        "easing": "linear",
+        "anchor": "center"
+      },
+      {
+        "id": "slow_push_in",
+        "direction": "in",
+        "scale_from": 1.0,
+        "scale_to": 1.08,
+        "duration_ms": 1200,
+        "easing": "ease_in_out",
+        "anchor": "center"
+      },
+      {
+        "id": "drift_out_linear",
+        "direction": "out",
+        "scale_from": 1.04,
+        "scale_to": 1.0,
+        "duration_ms": 300,
+        "easing": "linear",
+        "anchor": "center"
+      }
+    ],
+    "confidence": 64,
+    "direction_note": "O estilo recua mais do que aproxima: quase 2x mais zoom_out que zoom_in.",
+    "easing_mix": {
+      "linear": 0.557,
+      "ease_out": 0.213,
+      "indeterminado": 0.197,
+      "ease_in_out": 0.016,
+      "ease_in": 0.016
+    },
+    "anchor_mix": {
+      "center": 0.541,
+      "subject_face": 0.459
+    },
+    "anchor_correlation": "centro correlaciona com continuo/zoom_out/linear; sujeito_rosto correlaciona com punch_in/zoom_in",
+    "optical_or_digital_note": "57 de 61 classificados como digital, 4 indeterminado, mas a secao de incertezas do relatorio ressalva que a distincao frequentemente nao pode ser feita no material analisado."
+  },
+  "camera_moves": {
+    "pan_events_per_minute": 2.0,
+    "policy": "raro; a maioria e tremulacao natural, nao pan editorial deliberado",
+    "camera_baseline": "estatica",
+    "confidence": 60
+  },
+  "blur_effects": {
+    "events_per_minute": 2.0,
+    "type_default": "gaussian",
+    "region_default": "quadro_inteiro",
+    "duration_ms": {
+      "min": 100,
+      "typical": 100,
+      "median": 100,
+      "max": 333
+    },
+    "sigma_range": [
+      8,
+      26
+    ],
+    "function": "efeito_estetico_pontual",
+    "as_transition": {
+      "used": true,
+      "duration_ms": 367,
+      "easing": "ease_out",
+      "combined_with": "zoom_out"
+    },
+    "confidence": 78,
+    "sigma_range_origin": "inferido: o relatorio mede nitidez (laplaciano), nao sigma"
+  },
+  "framing": {
+    "dominant_shot_type": "medium_shot",
+    "shot_type_mix": {
+      "medium_shot": 0.943,
+      "medium_close_up": 0.045,
+      "medium_long_shot": 0.011
+    },
+    "dominant_angle": "frontal",
+    "angle_mix": {
+      "frontal": 0.85,
+      "eye_level": 0.15
+    },
+    "composition_default": "centralizado",
+    "headroom": "adequado_predominante",
+    "reframe_policy": {
+      "never_stretch": true,
+      "prefer": [
+        "fit_with_blurred_background",
+        "smart_center_crop"
+      ],
+      "smart_crop_max_loss_pct": 20,
+      "note": "Se o recorte descartar mais que smart_crop_max_loss_pct da AREA util, usar fundo desfocado em vez de crop."
+    },
+    "blurred_background": {
+      "sigma": 28,
+      "brightness_delta": -0.06,
+      "saturation": 0.85,
+      "zoom_cover": 1.08
+    },
+    "confidence": 85,
+    "headroom_mix": {
+      "adequado": 0.746,
+      "insuficiente": 0.149,
+      "excessivo": 0.09,
+      "indeterminado": 0.015
+    },
+    "headroom_note": "~15% dos planos tem headroom insuficiente (topo da cabeca cortado), aparentemente deliberado. Nao 'corrigir' isso ao reenquadrar.",
+    "split_screen_layout": {
+      "observed": true,
+      "share_of_shots": 0.18,
+      "variants": [
+        {
+          "band": "top",
+          "band_height_pct": [
+            0.1,
+            0.13
+          ],
+          "description": "faixa escura solida no topo; captura de tela em cima, pessoa embaixo"
+        },
+        {
+          "band": "bottom",
+          "band_height_pct": [
+            0.1,
+            0.13
+          ],
+          "description": "faixa escura na base, coincidindo com elemento grafico sobreposto"
+        }
+      ],
+      "note": "Nao e letterbox do video; e composicao. Nao remover ao reenquadrar.",
+      "confidence": 80
+    }
+  },
+  "captions": {
+    "enabled_default": true,
+    "system": "pop_on_word_by_word",
+    "reveal_unit": "word",
+    "entry_animation": "progressive_reveal_with_fade",
+    "entry_fade_ms": 90,
+    "exit_animation": "hard_replace",
+    "block": {
+      "lines_min": 1,
+      "lines_max": 2,
+      "words_per_block_min": 3,
+      "words_per_block_max": 7,
+      "words_per_block_typical": 5,
+      "max_block_duration_ms": 3200,
+      "min_block_duration_ms": 500,
+      "grow_direction": "down",
+      "first_line_anchor_is_fixed": true,
+      "lines_max_note": "O relatorio diz '1 a ~2 (ocasionalmente mais)'. 3 linhas e aceitavel em frase longa.",
+      "entry_duration_ms_observed": [
+        180,
+        1000
+      ],
+      "entry_duration_ms_median": 625
+    },
+    "typography": {
+      "font_primary": {
+        "family": "Helvetica Neue",
+        "weights": {
+          "regular": 400,
+          "bold": 700
+        },
+        "source": "system_macos",
+        "path_hint": "/System/Library/Fonts/HelveticaNeue.ttc",
+        "fallbacks": [
+          "Helvetica",
+          "Inter",
+          "Arimo",
+          "Liberation Sans",
+          "Arial"
+        ],
+        "identified_by": "usuario, a partir de frame do video",
+        "report_estimate_was": "Arial Bold (conf 46-68) / Helvetica Neue Bold"
+      },
+      "font_accent": {
+        "family": "Playfair Display",
+        "style": "italic",
+        "weight": 400,
+        "source": "bundled_ofl",
+        "path_hint": "assets/fonts/PlayfairDisplay-Italic[wght].ttf",
+        "fallbacks": [
+          "Georgia",
+          "Times New Roman"
+        ],
+        "identified_by": "usuario, a partir de frame do video",
+        "report_estimate_was": "Georgia Italic / Times New Roman Italic / Bodoni Moda Italic"
+      },
+      "font_size_pct_of_canvas_height": 0.0396,
+      "font_size_pct_range": [
+        0.031,
+        0.045
+      ],
+      "line_height_ratio": 1.276,
+      "tracking_px_at_reference": -1,
+      "tracking_note": "Tracking compacto; espacamento entre palavras reduzido.",
+      "case": "misto",
+      "confidence": 54,
+      "font_size_pct_median": 0.0406
+    },
+    "emphasis": {
+      "mechanism": "font_family_swap",
+      "no_color_change": true,
+      "styles": [
+        {
+          "id": "normal",
+          "font": "font_primary",
+          "weight": 400,
+          "italic": false,
+          "color": "#FFFFFF"
+        },
+        {
+          "id": "strong",
+          "font": "font_primary",
+          "weight": 700,
+          "italic": false,
+          "color": "#FFFFFF"
+        },
+        {
+          "id": "accent",
+          "font": "font_accent",
+          "weight": 400,
+          "italic": true,
+          "color": "#FFFFFF"
+        }
+      ],
+      "accent_share_of_words": 0.18,
+      "accent_selection_rule": "aplicar em substantivos/expressoes-chave curtas, nunca em palavras funcionais (artigos, preposicoes, conjuncoes)",
+      "confidence": 76,
+      "accent_share_origin": "inferido; o relatorio nao quantifica a fracao de palavras enfatizadas"
+    },
+    "color": {
+      "primary_hex": "#FFFFFF",
+      "accent_hex": "#FFFFFF",
+      "outline": {
+        "present": false,
+        "width_px": 0
+      },
+      "shadow": {
+        "present": "variavel",
+        "share_of_blocks": 0.5,
+        "offset_px": 2,
+        "blur_px": 3,
+        "alpha": 0.62,
+        "color_hex": "#000000",
+        "note": "3 das 6 instancias catalogadas nao tem sombra; uma tem halo difuso sem deslocamento. Sombra sutil e aceitavel como padrao seguro."
+      },
+      "background_box": {
+        "present": false
+      },
+      "confidence": 88,
+      "accent_hex_note": "Branco igual ao resto. A enfase e feita SO por troca de familia tipografica. Qualquer diferenca de tom percebida em frames comprimidos e artefato, nao design."
+    },
+    "layout": {
+      "max_width_pct_of_canvas": 0.76,
+      "side_margin_min_pct": 0.111,
+      "alignment_mix": {
+        "center": 0.5,
+        "left": 0.5
+      },
+      "alignment_default": "center",
+      "anchors": {
+        "lower_default": {
+          "share": 0.7,
+          "bbox_top_pct": 0.59,
+          "center_y_pct": 0.635,
+          "description": "faixa inferior-central, padrao do video",
+          "share_origin": "estimativa qualitativa: o relatorio diz que a ancora inferior vale 'na maior parte do video'. Nao e frequencia medida - o catalogo de 6 instancias e amostra de VARIACAO (2/2/2), nao de frequencia."
+        },
+        "footer": {
+          "share": 0.2,
+          "bbox_top_pct": 0.76,
+          "center_y_pct": 0.8,
+          "description": "variante proxima ao rodape",
+          "note": "O relatorio descreve so DUAS faixas (inferior ~55-70% e superior ~16-27%). O regime 'footer' (topo em 0.76) e uma terceira faixa derivada das instancias L04/L05, fora da faixa inferior declarada."
+        },
+        "upper": {
+          "share": 0.1,
+          "bbox_top_pct": 0.155,
+          "center_y_pct": 0.2,
+          "description": "reancoragem pontual no terco superior, para nao cobrir rosto/gesto ou compor com grafico"
+        }
+      },
+      "safe_area": {
+        "top_pct": 0.08,
+        "bottom_pct": 0.1,
+        "left_pct": 0.06,
+        "right_pct": 0.06
+      },
+      "confidence": 70
+    },
+    "gaps": {
+      "silent_gap_between_blocks_ms": [
+        100,
+        1000
+      ],
+      "note": "Pausas breves sem legenda entre blocos de fala sao parte do estilo."
+    },
+    "entry_fade_ms_origin": "inferido: fade por palavra; o relatorio mede a entrada do BLOCO inteiro (180-1000 ms)",
+    "transcription": {
+      "script": "scripts/transcribe.py",
+      "backends_priority": [
+        "whisper_local",
+        "faster_whisper",
+        "openai_api"
+      ],
+      "api_model": "whisper-1",
+      "word_timestamps_required": true,
+      "credential_sources": [
+        "env OPENAI_API_KEY",
+        "<skill>/.credentials.json"
+      ],
+      "chunk_seconds": 600,
+      "note": "O sistema pop-on exige timestamp POR PALAVRA; modelos que so devolvem timestamp por segmento nao servem."
+    }
+  },
+  "graphics_overlays": {
+    "events_per_minute": 3.9,
+    "policy": "usar arquivos fornecidos pelo usuario e/ou imagens buscadas por scripts/fetch_images.py em acervos Creative Commons; NUNCA inventar asset, logotipo ou marca, e nunca substituir por imagem generica quando nada pertinente for encontrado",
+    "sourcing": {
+      "enabled_default": true,
+      "script": "scripts/fetch_images.py",
+      "providers": [
+        "openverse",
+        "wikimedia_commons"
+      ],
+      "requires_api_key": false,
+      "relevance_rule": "o termo de busca vem do que esta sendo dito naquele trecho; a imagem entra junto da mencao e sai quando o assunto muda",
+      "query_language": "en",
+      "min_width_px": 900,
+      "min_area_px": 480000,
+      "quality_levels": {
+        "media": "lado maior 900-1399px",
+        "boa": "lado maior >=1400px"
+      },
+      "prefer_quality": "boa",
+      "per_query": 3,
+      "visual_confirmation_required": true,
+      "attribution_required": true,
+      "on_nothing_relevant": "omitir a insercao e registrar em limitations",
+      "origin": "regra editorial definida pelo usuario; nao deriva do relatorio, que declara nao ter transcrito nem interpretado a fala"
+    },
+    "placement_zones": [
+      "upper_third",
+      "center",
+      "lower_center",
+      "beside_subject"
+    ],
+    "size_pct_of_canvas_width": [
+      0.31,
+      1.0
+    ],
+    "entry_animation": "fade_or_scale_pop",
+    "entry_duration_ms": [
+      170,
+      330
+    ],
+    "exit_animation": "hard_cut_or_short_fade",
+    "motion_during": "static",
+    "parallax": false,
+    "opacity_pct": [
+      98,
+      100
+    ],
+    "blend_mode": "normal",
+    "corner_radius_pct": "variavel",
+    "shadow": "raro",
+    "confidence": 92,
+    "size_pct_typical": 0.8,
+    "duration_ms": {
+      "min": 500,
+      "median": 1600,
+      "max": 21533,
+      "note": "Alta variancia: de meio segundo a 21,5s. Painel de UI longo puxa o topo."
+    },
+    "corner_radius_note": "Maioria sem container. Ha excecoes: uma capsula com raio ~metade da altura e um cartao com raio moderado (~35-40 px em 720px de largura)."
+  },
+  "opening": {
+    "mechanism": "blur_transition_with_zoom_out",
+    "duration_ms": 367,
+    "duration_frames_at_30fps": 11,
+    "easing": "ease_out",
+    "blur_sigma_start": 26,
+    "blur_sigma_end": 0,
+    "scale_start": 1.14,
+    "scale_end": 1.0,
+    "has_title_card": false,
+    "has_logo": false,
+    "fade_from_black": false,
+    "caption_starts_within_ms": 200,
+    "confidence": 92,
+    "measured": [
+      "duration_ms",
+      "duration_frames_at_30fps",
+      "easing",
+      "mechanism",
+      "has_title_card",
+      "has_logo",
+      "fade_from_black",
+      "caption_starts_within_ms"
+    ],
+    "inferred_reproduction_params": [
+      "blur_sigma_start",
+      "blur_sigma_end",
+      "scale_start",
+      "scale_end"
+    ],
+    "inferred_note": "O relatorio mede a abertura por laplacian_var (2.08 no frame 0, minimo do video) e descreve 'close-up extremo que resolve com recuo de escala'. Os valores de sigma e de escala inicial sao escolhas de engenharia para reproduzir esse efeito, nao medicoes."
+  },
+  "closing": {
+    "mechanism": "hard_cut",
+    "fade_out": false,
+    "dip_to_black": false,
+    "end_card": false,
+    "freeze_frame": false,
+    "tail_padding_ms": 0,
+    "note": "O video de referencia termina abruptamente sobre o plano de conteudo. Manter isso como assinatura do estilo.",
+    "confidence": 95
+  },
+  "color_grading": {
+    "look": "quente_discreto",
+    "temperature_shift": "warm",
+    "eq": {
+      "contrast": 1.06,
+      "saturation": 1.05,
+      "brightness": 0.01,
+      "gamma": 1.0
+    },
+    "colorbalance": {
+      "rs": 0.02,
+      "gs": 0.0,
+      "bs": -0.02,
+      "rm": 0.03,
+      "gm": 0.005,
+      "bm": -0.03,
+      "rh": 0.02,
+      "gh": 0.0,
+      "bh": -0.025
+    },
+    "vignette": {
+      "present": "raro",
+      "note": "Ausente na maioria; um cluster de 7 planos registra vinheta sutil."
+    },
+    "grain": {
+      "present": false
+    },
+    "sharpening": {
+      "present": true,
+      "amount": 0.35,
+      "note": "leve, sem halos"
+    },
+    "glow_bloom": {
+      "present": true,
+      "intensity": "discreto"
+    },
+    "chromatic_aberration": {
+      "present": false
+    },
+    "letterbox": {
+      "present": false
+    },
+    "uniformity": "alto - mesmo look em praticamente todos os planos",
+    "confidence": 86,
+    "saturation_note": "O relatorio agrega 'saturacao media' em 87 de 88 planos. 1.10 era alto demais.",
+    "shadow_tint_note": "As sombras quentes/amarronzadas descrevem so o Cluster 1 (11 planos). Os clusters maiores descrevem sombras neutras a levemente frias. O colorbalance abaixo aquece as sombras e, portanto, e uma escolha estetica, nao a media medida.",
+    "colorbalance_origin": "inferido: o relatorio nao traz nenhum valor numerico de grading"
+  },
+  "audio": {
+    "preserve_speech_continuity": true,
+    "never_cut_mid_syllable": true,
+    "min_silence_to_remove_ms": 450,
+    "silence_threshold_db": -32,
+    "keep_breath_padding_ms": 90,
+    "crossfade_on_transition": true,
+    "crossfade_matches_video_transition": true,
+    "normalize": {
+      "enabled": true,
+      "target_lufs": -14.0,
+      "true_peak_db": -1.5,
+      "lra": 11
+    },
+    "music": {
+      "add_by_default": false,
+      "note": "Somente se o usuario fornecer o arquivo."
+    },
+    "confidence": 50,
+    "origin": "inferido",
+    "origin_note": "O relatorio nao mede LUFS, limiar de silencio, folga de respiracao nem crossfade. Estes sao defaults de engenharia para reproduzir o estilo com seguranca."
+  },
+  "export": {
+    "container": "mp4",
+    "video_codec": "libx264",
+    "pixel_format": "yuv420p",
+    "profile": "high",
+    "level": "4.1",
+    "quality": {
+      "high": {
+        "crf": 18,
+        "preset": "slow"
+      },
+      "draft": {
+        "crf": 26,
+        "preset": "veryfast"
+      }
+    },
+    "movflags": "+faststart",
+    "audio_codec": "aac",
+    "audio_sample_rate": 48000,
+    "audio_bitrate": "224k",
+    "audio_channels": 2,
+    "color_tags": {
+      "colorspace": "bt709",
+      "color_primaries": "bt709",
+      "color_trc": "bt709",
+      "color_range": "tv"
+    },
+    "confidence": 55,
+    "origin": "inferido",
+    "origin_note": "O relatorio nao especifica CRF, preset, bitrate de audio nem resolucao de entrega. O audio ORIGINAL e HE-AAC 44100 Hz / 56 kbps; 48 kHz / 224 kbps e escolha de entrega.",
+    "source_audio_reference": {
+      "codec": "HE-AAC",
+      "sample_rate": 44100,
+      "bitrate_kbps": 56
+    }
+  },
+  "adaptation_rules": {
+    "scale_event_counts_by_duration": true,
+    "never_reuse_absolute_timestamps": true,
+    "preserve_main_content": true,
+    "remove_pauses_only_with_confidence": 0.7,
+    "max_removed_share_of_duration": 0.35,
+    "never_stretch_image": true,
+    "no_invented_assets": true,
+    "external_image_download": "permitido apenas via scripts/fetch_images.py (acervos Creative Commons, com licenca e autor registrados); nenhum outro download externo e permitido",
+    "no_music_without_user_file": true,
+    "never_alter_speech_meaning": true
+  }
+}

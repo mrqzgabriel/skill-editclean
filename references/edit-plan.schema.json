@@ -1,0 +1,1115 @@
+{
+ "$schema": "http://json-schema.org/draft-07/schema#",
+ "$id": "https://local/editclean/edit-plan.schema.json",
+ "title": "EditClean Edit Plan",
+ "description": "Plano de edicao para um video especifico, gerado a partir do manifesto de analise + style-profile.json.",
+ "type": "object",
+ "required": [
+  "plan_version",
+  "source",
+  "output",
+  "segments"
+ ],
+ "additionalProperties": false,
+ "definitions": {
+  "confidence": {
+   "type": "integer",
+   "minimum": 0,
+   "maximum": 100
+  },
+  "measured": {
+   "type": "string",
+   "enum": [
+    "measured",
+    "inferred"
+   ],
+   "description": "measured = derivado de sinal do proprio video; inferred = decisao estetica aplicada a partir do perfil."
+  },
+  "easing": {
+   "type": "string",
+   "enum": [
+    "linear",
+    "ease_in",
+    "ease_out",
+    "ease_in_out"
+   ]
+  },
+  "eventBase": {
+   "type": "object",
+   "required": [
+    "id",
+    "start",
+    "end",
+    "duration",
+    "type",
+    "confidence",
+    "origin"
+   ],
+   "properties": {
+    "id": {
+     "type": "string",
+     "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+    },
+    "start": {
+     "type": "number",
+     "minimum": 0,
+     "description": "segundos na TIMELINE DE SAIDA"
+    },
+    "end": {
+     "type": "number",
+     "minimum": 0
+    },
+    "duration": {
+     "type": "number",
+     "minimum": 0
+    },
+    "type": {
+     "type": "string"
+    },
+    "params": {
+     "type": "object"
+    },
+    "evidence": {
+     "type": "string"
+    },
+    "confidence": {
+     "$ref": "#/definitions/confidence"
+    },
+    "origin": {
+     "$ref": "#/definitions/measured"
+    }
+   }
+  },
+  "normPos": {
+   "type": "object",
+   "description": "Posicao normalizada (0..1) relativa ao canvas de saida.",
+   "properties": {
+    "x_pct": {
+     "type": "number",
+     "minimum": -1,
+     "maximum": 2
+    },
+    "y_pct": {
+     "type": "number",
+     "minimum": -1,
+     "maximum": 2
+    },
+    "w_pct": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 2
+    },
+    "h_pct": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 2
+    }
+   },
+   "additionalProperties": false
+  }
+ },
+ "properties": {
+  "plan_version": {
+   "type": "string"
+  },
+  "generated_by": {
+   "type": "string"
+  },
+  "profile_version": {
+   "type": "string"
+  },
+  "notes": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "limitations": {
+   "type": "array",
+   "description": "Limitacoes reais registradas (ex.: legenda desativada por falta de backend de transcricao).",
+   "items": {
+    "type": "string"
+   }
+  },
+  "source": {
+   "type": "object",
+   "required": [
+    "path",
+    "duration",
+    "width",
+    "height",
+    "fps"
+   ],
+   "additionalProperties": true,
+   "properties": {
+    "path": {
+     "type": "string"
+    },
+    "duration": {
+     "type": "number",
+     "exclusiveMinimum": 0
+    },
+    "width": {
+     "type": "integer",
+     "exclusiveMinimum": 0
+    },
+    "height": {
+     "type": "integer",
+     "exclusiveMinimum": 0
+    },
+    "fps": {
+     "type": "number",
+     "exclusiveMinimum": 0
+    },
+    "has_audio": {
+     "type": "boolean"
+    },
+    "video_codec": {
+     "type": "string"
+    },
+    "audio_codec": {
+     "type": "string"
+    },
+    "sample_rate": {
+     "type": "integer"
+    },
+    "aspect": {
+     "type": "string"
+    }
+   }
+  },
+  "output": {
+   "type": "object",
+   "required": [
+    "path",
+    "width",
+    "height",
+    "fps"
+   ],
+   "additionalProperties": false,
+   "properties": {
+    "path": {
+     "type": "string"
+    },
+    "width": {
+     "type": "integer",
+     "exclusiveMinimum": 0
+    },
+    "height": {
+     "type": "integer",
+     "exclusiveMinimum": 0
+    },
+    "fps": {
+     "type": "number",
+     "exclusiveMinimum": 0
+    },
+    "aspect": {
+     "type": "string",
+     "enum": [
+      "keep",
+      "9:16",
+      "1:1",
+      "16:9"
+     ]
+    },
+    "quality": {
+     "type": "string",
+     "enum": [
+      "draft",
+      "high"
+     ]
+    },
+    "container": {
+     "type": "string",
+     "enum": [
+      "mp4"
+     ]
+    },
+    "video_codec": {
+     "type": "string"
+    },
+    "audio_codec": {
+     "type": "string"
+    },
+    "crf": {
+     "type": "integer",
+     "minimum": 0,
+     "maximum": 51
+    },
+    "preset": {
+     "type": "string"
+    },
+    "pixel_format": {
+     "type": "string"
+    },
+    "audio_bitrate": {
+     "type": "string"
+    },
+    "audio_sample_rate": {
+     "type": "integer"
+    },
+    "movflags": {
+     "type": "string"
+    }
+   }
+  },
+  "reframe": {
+   "type": "object",
+   "description": "Como adaptar o quadro de origem ao canvas de saida. Nunca esticar.",
+   "additionalProperties": false,
+   "required": [
+    "mode"
+   ],
+   "properties": {
+    "mode": {
+     "type": "string",
+     "enum": [
+      "none",
+      "smart_crop",
+      "blurred_background",
+      "pad"
+     ]
+    },
+    "crop_anchor_x_pct": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 1
+    },
+    "crop_anchor_y_pct": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 1
+    },
+    "background_sigma": {
+     "type": "number",
+     "minimum": 0
+    },
+    "background_zoom": {
+     "type": "number",
+     "minimum": 1
+    },
+    "background_brightness": {
+     "type": "number"
+    },
+    "background_saturation": {
+     "type": "number",
+     "minimum": 0
+    },
+    "confidence": {
+     "$ref": "#/definitions/confidence"
+    },
+    "origin": {
+     "$ref": "#/definitions/measured"
+    }
+   }
+  },
+  "segments": {
+   "type": "array",
+   "minItems": 1,
+   "description": "Trechos MANTIDOS do video de origem, em ordem de timeline de saida.",
+   "items": {
+    "type": "object",
+    "required": [
+     "id",
+     "src_start",
+     "src_end",
+     "out_start",
+     "duration"
+    ],
+    "additionalProperties": false,
+    "properties": {
+     "id": {
+      "type": "string"
+     },
+     "src_start": {
+      "type": "number",
+      "minimum": 0
+     },
+     "src_end": {
+      "type": "number",
+      "minimum": 0
+     },
+     "out_start": {
+      "type": "number",
+      "minimum": 0
+     },
+     "duration": {
+      "type": "number",
+      "exclusiveMinimum": 0
+     },
+     "reason": {
+      "type": "string"
+     },
+     "confidence": {
+      "$ref": "#/definitions/confidence"
+     },
+     "origin": {
+      "$ref": "#/definitions/measured"
+     },
+     "zoom": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "scale_from",
+       "scale_to",
+       "easing"
+      ],
+      "properties": {
+       "preset_id": {
+        "type": "string"
+       },
+       "scale_from": {
+        "type": "number",
+        "minimum": 1.0,
+        "maximum": 3.0
+       },
+       "scale_to": {
+        "type": "number",
+        "minimum": 1.0,
+        "maximum": 3.0
+       },
+       "easing": {
+        "$ref": "#/definitions/easing"
+       },
+       "anchor_x_pct": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+       },
+       "anchor_y_pct": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+       },
+       "start_offset": {
+        "type": "number",
+        "minimum": 0
+       },
+       "duration": {
+        "type": "number",
+        "exclusiveMinimum": 0
+       },
+       "confidence": {
+        "$ref": "#/definitions/confidence"
+       },
+       "origin": {
+        "$ref": "#/definitions/measured"
+       }
+      }
+     }
+    }
+   }
+  },
+  "removed_segments": {
+   "type": "array",
+   "description": "Trechos REMOVIDOS do original (pausas, silencios), para auditoria.",
+   "items": {
+    "type": "object",
+    "required": [
+     "id",
+     "src_start",
+     "src_end",
+     "reason",
+     "confidence",
+     "origin"
+    ],
+    "additionalProperties": false,
+    "properties": {
+     "id": {
+      "type": "string"
+     },
+     "src_start": {
+      "type": "number",
+      "minimum": 0
+     },
+     "src_end": {
+      "type": "number",
+      "minimum": 0
+     },
+     "duration": {
+      "type": "number",
+      "minimum": 0
+     },
+     "reason": {
+      "type": "string"
+     },
+     "confidence": {
+      "$ref": "#/definitions/confidence"
+     },
+     "origin": {
+      "$ref": "#/definitions/measured"
+     }
+    }
+   }
+  },
+  "cuts": {
+   "type": "array",
+   "description": "Fronteiras de corte seco entre segmentos consecutivos.",
+   "items": {
+    "allOf": [
+     {
+      "$ref": "#/definitions/eventBase"
+     }
+    ],
+    "properties": {
+     "type": {
+      "enum": [
+       "hard_cut",
+       "jump_cut"
+      ]
+     },
+     "between": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "minItems": 2,
+      "maxItems": 2
+     }
+    }
+   }
+  },
+  "transitions": {
+   "type": "array",
+   "description": "Transicoes com duracao > 0 entre segmentos consecutivos.",
+   "items": {
+    "allOf": [
+     {
+      "$ref": "#/definitions/eventBase"
+     }
+    ],
+    "properties": {
+     "type": {
+      "enum": [
+       "dissolve",
+       "fade_in",
+       "fade_out",
+       "wipe",
+       "whip_pan",
+       "blur_transition",
+       "dip_to_black"
+      ]
+     },
+     "between": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "minItems": 2,
+      "maxItems": 2
+     },
+     "params": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+       "direction": {
+        "type": "string",
+        "enum": [
+         "up",
+         "down",
+         "left",
+         "right",
+         "none"
+        ]
+       },
+       "easing": {
+        "$ref": "#/definitions/easing"
+       },
+       "sigma": {
+        "type": "number",
+        "minimum": 0
+       }
+      }
+     }
+    }
+   }
+  },
+  "moves": {
+   "type": "array",
+   "description": "Pans/tilts/reenquadramentos animados.",
+   "items": {
+    "allOf": [
+     {
+      "$ref": "#/definitions/eventBase"
+     }
+    ],
+    "properties": {
+     "type": {
+      "enum": [
+       "pan",
+       "tilt",
+       "reframe"
+      ]
+     },
+     "params": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+       "from_x_pct": {
+        "type": "number"
+       },
+       "from_y_pct": {
+        "type": "number"
+       },
+       "to_x_pct": {
+        "type": "number"
+       },
+       "to_y_pct": {
+        "type": "number"
+       },
+       "easing": {
+        "$ref": "#/definitions/easing"
+       }
+      }
+     }
+    }
+   }
+  },
+  "blurs": {
+   "type": "array",
+   "description": "Eventos de desfoque aplicados na timeline de saida.",
+   "items": {
+    "allOf": [
+     {
+      "$ref": "#/definitions/eventBase"
+     }
+    ],
+    "properties": {
+     "type": {
+      "enum": [
+       "gaussian",
+       "motion",
+       "directional",
+       "radial",
+       "background"
+      ]
+     },
+     "params": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+       "sigma": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 60
+       },
+       "sigma_from": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 60
+       },
+       "sigma_to": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 60
+       },
+       "easing": {
+        "$ref": "#/definitions/easing"
+       },
+       "region": {
+        "type": "string",
+        "enum": [
+         "full_frame",
+         "background",
+         "region"
+        ]
+       },
+       "rect": {
+        "$ref": "#/definitions/normPos"
+       }
+      }
+     }
+    }
+   }
+  },
+  "captions": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "enabled"
+   ],
+   "properties": {
+    "enabled": {
+     "type": "boolean"
+    },
+    "source": {
+     "type": "string",
+     "enum": [
+      "none",
+      "faster_whisper",
+      "whisper_local",
+      "openai_api",
+      "user_supplied"
+     ]
+    },
+    "language": {
+     "type": "string"
+    },
+    "font_primary": {
+     "type": "string"
+    },
+    "font_accent": {
+     "type": "string"
+    },
+    "font_size_px": {
+     "type": "integer",
+     "exclusiveMinimum": 0
+    },
+    "line_height_px": {
+     "type": "integer",
+     "exclusiveMinimum": 0
+    },
+    "max_width_pct": {
+     "type": "number",
+     "minimum": 0.1,
+     "maximum": 1
+    },
+    "shadow": {
+     "type": "object",
+     "additionalProperties": false,
+     "properties": {
+      "present": {
+       "type": "boolean"
+      },
+      "offset_px": {
+       "type": "number",
+       "minimum": 0
+      },
+      "blur_px": {
+       "type": "number",
+       "minimum": 0
+      },
+      "alpha": {
+       "type": "number",
+       "minimum": 0,
+       "maximum": 1
+      }
+     }
+    },
+    "outline": {
+     "type": "object",
+     "additionalProperties": false,
+     "properties": {
+      "present": {
+       "type": "boolean"
+      },
+      "width_px": {
+       "type": "number",
+       "minimum": 0
+      }
+     }
+    },
+    "blocks": {
+     "type": "array",
+     "description": "Blocos de legenda na timeline de SAIDA.",
+     "items": {
+      "type": "object",
+      "required": [
+       "id",
+       "start",
+       "end",
+       "words",
+       "anchor"
+      ],
+      "additionalProperties": false,
+      "properties": {
+       "id": {
+        "type": "string"
+       },
+       "start": {
+        "type": "number",
+        "minimum": 0
+       },
+       "end": {
+        "type": "number",
+        "minimum": 0
+       },
+       "anchor": {
+        "type": "string",
+        "enum": [
+         "lower_default",
+         "footer",
+         "upper"
+        ]
+       },
+       "alignment": {
+        "type": "string",
+        "enum": [
+         "center",
+         "left"
+        ]
+       },
+       "lines": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 3
+       },
+       "confidence": {
+        "$ref": "#/definitions/confidence"
+       },
+       "origin": {
+        "$ref": "#/definitions/measured"
+       },
+       "words": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+         "type": "object",
+         "required": [
+          "text",
+          "start",
+          "end"
+         ],
+         "additionalProperties": false,
+         "properties": {
+          "text": {
+           "type": "string",
+           "minLength": 1
+          },
+          "start": {
+           "type": "number",
+           "minimum": 0
+          },
+          "end": {
+           "type": "number",
+           "minimum": 0
+          },
+          "style": {
+           "type": "string",
+           "enum": [
+            "normal",
+            "strong",
+            "accent"
+           ]
+          },
+          "line": {
+           "type": "integer",
+           "minimum": 0,
+           "maximum": 2
+          }
+         }
+        }
+       },
+       "font_size_px": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "description": "Corpo deste bloco. Ausente = font_size_px global."
+       }
+      }
+     }
+    },
+    "primary_hex": {
+     "type": "string",
+     "pattern": "^#[0-9A-Fa-f]{6}$"
+    },
+    "accent_hex": {
+     "type": "string",
+     "pattern": "^#[0-9A-Fa-f]{6}$"
+    },
+    "entry_fade_ms": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 1000
+    },
+    "accent_size_ratio": {
+     "type": "number",
+     "minimum": 0.5,
+     "maximum": 3.0,
+     "description": "Corpo da familia de destaque relativo ao corpo base do bloco."
+    },
+    "line_height_ratio": {
+     "type": "number",
+     "minimum": 0.8,
+     "maximum": 2.5
+    },
+    "side_margin_pct": {
+     "type": "number",
+     "minimum": 0.0,
+     "maximum": 0.4
+    },
+    "tracking_px": {
+     "type": "number",
+     "minimum": -10,
+     "maximum": 10
+    },
+    "anchors": {
+     "type": "object",
+     "additionalProperties": false,
+     "properties": {
+      "lower_default": {
+       "type": "number",
+       "minimum": 0,
+       "maximum": 1
+      },
+      "footer": {
+       "type": "number",
+       "minimum": 0,
+       "maximum": 1
+      },
+      "upper": {
+       "type": "number",
+       "minimum": 0,
+       "maximum": 1
+      }
+     }
+    }
+   }
+  },
+  "overlays": {
+   "type": "array",
+   "description": "Imagens sobrepostas. SOMENTE arquivos fornecidos pelo usuario.",
+   "items": {
+    "allOf": [
+     {
+      "$ref": "#/definitions/eventBase"
+     }
+    ],
+    "properties": {
+     "type": {
+      "enum": [
+       "image"
+      ]
+     },
+     "params": {
+      "type": "object",
+      "required": [
+       "path",
+       "pos"
+      ],
+      "additionalProperties": false,
+      "properties": {
+       "path": {
+        "type": "string"
+       },
+       "pos": {
+        "$ref": "#/definitions/normPos"
+       },
+       "opacity": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+       },
+       "entry": {
+        "type": "string",
+        "enum": [
+         "none",
+         "fade",
+         "scale_pop"
+        ]
+       },
+       "exit": {
+        "type": "string",
+        "enum": [
+         "none",
+         "fade",
+         "hard"
+        ]
+       },
+       "entry_ms": {
+        "type": "number",
+        "minimum": 0
+       },
+       "exit_ms": {
+        "type": "number",
+        "minimum": 0
+       },
+       "mask": {
+        "type": "string",
+        "enum": [
+         "none",
+         "rounded_rect",
+         "circle"
+        ]
+       },
+       "corner_radius_pct": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 0.5
+       }
+      }
+     }
+    }
+   }
+  },
+  "opening": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "enabled": {
+     "type": "boolean"
+    },
+    "type": {
+     "type": "string",
+     "enum": [
+      "none",
+      "blur_zoom_out",
+      "fade_in"
+     ]
+    },
+    "duration": {
+     "type": "number",
+     "minimum": 0
+    },
+    "blur_sigma_start": {
+     "type": "number",
+     "minimum": 0
+    },
+    "scale_start": {
+     "type": "number",
+     "minimum": 1
+    },
+    "easing": {
+     "$ref": "#/definitions/easing"
+    },
+    "confidence": {
+     "$ref": "#/definitions/confidence"
+    },
+    "origin": {
+     "$ref": "#/definitions/measured"
+    }
+   }
+  },
+  "closing": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "enabled": {
+     "type": "boolean"
+    },
+    "type": {
+     "type": "string",
+     "enum": [
+      "hard_cut",
+      "fade_out",
+      "dip_to_black"
+     ]
+    },
+    "duration": {
+     "type": "number",
+     "minimum": 0
+    },
+    "confidence": {
+     "$ref": "#/definitions/confidence"
+    },
+    "origin": {
+     "$ref": "#/definitions/measured"
+    }
+   }
+  },
+  "color": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "enabled": {
+     "type": "boolean"
+    },
+    "eq": {
+     "type": "object",
+     "additionalProperties": false,
+     "properties": {
+      "contrast": {
+       "type": "number",
+       "minimum": 0,
+       "maximum": 3
+      },
+      "saturation": {
+       "type": "number",
+       "minimum": 0,
+       "maximum": 3
+      },
+      "brightness": {
+       "type": "number",
+       "minimum": -1,
+       "maximum": 1
+      },
+      "gamma": {
+       "type": "number",
+       "minimum": 0.1,
+       "maximum": 3
+      }
+     }
+    },
+    "colorbalance": {
+     "type": "object",
+     "additionalProperties": false,
+     "properties": {
+      "rs": {
+       "type": "number"
+      },
+      "gs": {
+       "type": "number"
+      },
+      "bs": {
+       "type": "number"
+      },
+      "rm": {
+       "type": "number"
+      },
+      "gm": {
+       "type": "number"
+      },
+      "bm": {
+       "type": "number"
+      },
+      "rh": {
+       "type": "number"
+      },
+      "gh": {
+       "type": "number"
+      },
+      "bh": {
+       "type": "number"
+      }
+     }
+    },
+    "sharpen": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 2
+    },
+    "confidence": {
+     "$ref": "#/definitions/confidence"
+    },
+    "origin": {
+     "$ref": "#/definitions/measured"
+    }
+   }
+  },
+  "audio": {
+   "type": "object",
+   "additionalProperties": false,
+   "properties": {
+    "enabled": {
+     "type": "boolean"
+    },
+    "normalize": {
+     "type": "boolean"
+    },
+    "target_lufs": {
+     "type": "number"
+    },
+    "true_peak_db": {
+     "type": "number"
+    },
+    "crossfade_on_transition": {
+     "type": "boolean"
+    },
+    "music_path": {
+     "type": [
+      "string",
+      "null"
+     ]
+    },
+    "music_gain_db": {
+     "type": "number"
+    },
+    "confidence": {
+     "$ref": "#/definitions/confidence"
+    },
+    "origin": {
+     "$ref": "#/definitions/measured"
+    }
+   }
+  }
+ }
+}

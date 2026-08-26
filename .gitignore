@@ -1,0 +1,17 @@
+# credenciais - NUNCA versionar
+.credentials.json
+*.credentials.json
+.env
+*.key
+
+# lixo do sistema / python
+.DS_Store
+__pycache__/
+*.pyc
+
+# saidas de execucao
+*.mp4
+*.partial.mp4
+edit-plan.json
+manifest.json
+words*.json
