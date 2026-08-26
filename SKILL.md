@@ -123,6 +123,34 @@ Depois **confira a transcrição** contra o áudio. Corrija só o que o modelo *
 **Nunca invente palavra que não esteja no áudio, nunca altere o sentido da fala.** Se corrigir algo,
 registre em `limitations`.
 
+Modelo `small` erra o suficiente para atrapalhar. **Confira rodando `medium` sobre o mesmo áudio** e
+compare frase a frase — o `small` é quem dá os timestamps por palavra, o `medium` só confirma o
+texto. No IMG_1169 isso pegou `assistir→assiste`, `no 20 semana→no fim de semana`,
+`remião→reunião`, `relatam o→relatam um`, `esfria→esfrie`. Para um trecho duvidoso, recorte a fatia
+e rode com `initial_prompt` do contexto. **Não use `atempo` para "ouvir devagar"** — distorce e a
+transcrição piora.
+
+### O alinhador estica artigo para dentro do silêncio
+
+`sanitize_times()` no `build_plan.py` redistribui tokens cujos **inícios ficam a menos de 80 ms** um
+do outro. Palavra funcional curta (`o`, `a`, `de`) costuma vir do Whisper com 60–80 ms e dispara
+isso, empurrando a **palavra seguinte** em até ~330 ms — ela acende atrasada na legenda.
+
+Confira antes de montar o plano:
+
+```python
+toks = bp.sanitize_times(bp.normalize_tokens(raw["words"]), spans)
+[(i, w[i]["text"]) for i in range(len(w)) if abs(w[i]["start"] - toks[i]["start"]) > 0.05]
+```
+
+Onde acusar, **redistribua os tempos dentro da própria frase** dando ≥ 0,10 s de espaçamento entre
+os inícios. Isso muda só **quando a palavra acende**, nunca o que é dito — mas registre em
+`limitations`. Cuidado com float: `17.08 - 17.00` dá `0.0799…`, que cai abaixo do limite.
+
+Caso à parte: quando o Whisper estica uma palavra **para dentro de um silêncio detectado** (o `A` de
+"A Segia" ocupando 24,96→25,52 com silêncio medido em 24,88→25,44), o certo é encolher a palavra
+para junto da seguinte. Compare `words.json` com `manifest.analysis.silences`.
+
 Se nenhum backend estiver disponível: informe o bloqueio **antes de renderizar**, siga com
 `captions.enabled: false` e registre em `limitations`.
 
@@ -135,24 +163,42 @@ clipart, e os PNGs "transparentes" do Openverse vêm com o xadrez **pintado** na
 
 ```bash
 python3 "$SKILL/scripts/fetch_images_apify.py" --outdir "$WORK/img" \
-  --query "termo um" --query "termo dois" --per-query 10
+  --query "termo um" --query "termo dois" --per-query 30
 ```
 
-O token está em `$SKILL/.credentials.json` (`apify_token`). O script filtra tamanho e domínios que
-só devolvem placeholder.
+O token está em `$SKILL/.credentials.json` (`apify_token`).
+
+> **O acervo é muito sujo.** Medido em 217 candidatas de 24 consultas: **86 eram a página de
+> bloqueio de hotlink**, 48 mockup/render 3D/composição, e só **33 print ou foto real**. Conte com
+> descartar ~85% e peça **30 por consulta**. O script agora barra a página de bloqueio no pixel e
+> guarda o que descartou em `<outdir>/rejeitadas/`. Detalhes em `style-spec.md` §9.
+>
+> **Consulta abstrata atrai o spam.** "gráfico de conversão", "ampulheta", "dinheiro na mesa"
+> voltaram 100% bloqueio; termo concreto ("whatsapp", "excel line chart") voltou resultado real. Se
+> uma consulta só devolve bloqueio, troque o termo — não insista.
 
 Regras:
 
 1. **Abra e olhe cada imagem.** Relevância é decisão sua, não do script.
-2. **Recorte marcas de terceiros** — e principalmente de **concorrentes do usuário** (seria péssimo
+2. **Só print de tela ou fotografia real.** Mockup vetorial, render 3D de celular, arte de IA e
+   composição de Photoshop estão **proibidos** — o Gabriel rejeitou explicitamente
+   (`user_overrides.images_must_be_real`). Sinal de mockup: "Lorem ipsum", balões uniformes,
+   avatar como círculo chapado, 09:41 repetido em todos os painéis, "template"/"PSD"/"IMAGE NOT
+   INCLUDED". O detector do script **não** pega isso — só o olho pega.
+3. **Descarte print que exponha nome + foto de pessoa privada identificável.** Risco num vídeo
+   comercial. Print com nome borrado pelo blog também sai: fica com cara de censura.
+4. **Recorte marcas de terceiros** — e principalmente de **concorrentes do usuário** (seria péssimo
    mostrar concorrente no VSL dele). Recortar a região útil quase sempre resolve.
-3. Posicione conforme `graphics_overlays.safe_margins`: faixa no topo, 3,5% de respiro da borda,
-   largura ≤ 86%. A **base fica acima da cabeça** — o limite vem do `subject.json`, não de medição
-   manual.
-4. Se nada pertinente aparecer, **omita a inserção** e registre em `limitations`. Nunca use asset
+5. **Proporção ≥ ~1,15:1.** A faixa útil tem altura travada (~15% do canvas), então a largura sai da
+   proporção — e precisa alcançar o mínimo de 0,31 da largura. Print de celular **em pé** renderiza
+   com ~13% da largura e fica ilegível: recorte uma faixa horizontal, ou procure foto do aparelho na
+   mão/na mesa. Posicione conforme `graphics_overlays.safe_margins`: 3,5% de respiro no topo,
+   largura ≤ 86%, e a **base acima da cabeça** — o limite vem do `subject.json`.
+6. Se nada pertinente aparecer, **omita a inserção** e registre em `limitations`. Nunca use asset
    genérico de preenchimento.
-5. **Avise o usuário no resumo final** que essas imagens têm direitos autorais e que o ideal é
-   trocar por material próprio dele.
+7. **Avise o usuário no resumo final** que essas imagens têm direitos autorais. E quando o assunto
+   for o produto dele, **peça um print do próprio celular/sistema** — é real, em português, no
+   contexto certo, sem direitos de terceiros e sem expor ninguém. Vale mais que qualquer busca.
 
 Passe as escolhas para o `build_plan.py` num JSON:
 

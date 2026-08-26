@@ -314,6 +314,81 @@ Use `scripts/fetch_images_apify.py` (Google Images via Apify, token em `.credent
 4. Se nada pertinente aparecer, **omita** e registre em `limitations`. Nunca use asset genérico de
    preenchimento.
 
+### Só imagem real **[v2.4, preferência do Gabriel]**
+
+Ele viu a primeira entrega e pediu: *"imagem do whatsapp real mesmo como ele é e não uma edit ou
+feito com IA, ou imagem feita no photoshop"*.
+
+Só vale **print de tela** ou **fotografia**. Estão proibidos mockup vetorial, render 3D de celular,
+arte generativa e composição de Photoshop — inclusive os bem-feitos.
+
+| Sinal de **mockup** | Sinal de **print real** |
+|---|---|
+| "Lorem ipsum dolor sit amet" | barra de status com hora, bateria, operadora |
+| balões perfeitamente uniformes e repetidos | textos de tamanhos irregulares, conteúdo específico |
+| avatar como círculo chapado ou silhueta | fotos de perfil de pessoas de verdade |
+| 09:41 ou 12:30 repetido em todos os painéis | horários variados |
+| fundo colorido chapado atrás do aparelho | reflexo, moiré, dedo, borda do aparelho |
+| "template", "UI kit", "PSD", "IMAGE NOT INCLUDED" | — |
+
+**Privacidade:** descarte print real que exponha **nome + foto de pessoa privada identificável**
+(lista de conversas com contatos reais). Num vídeo comercial isso é risco — há decisão do STJ sobre
+divulgação de print de conversa de WhatsApp. Prefira print sem nome visível, ou recorte.
+
+Cuidado com o efeito colateral: quase todo print de "caixa de entrada cheia" que existe na web
+pública vem de **artigo de tutorial**, e chega com seta vermelha desenhada por cima, nome borrado
+(cara de censura) ou marca d'água de blog. Todos os três leem como "editado" e o Gabriel rejeita.
+
+Quando o assunto é o produto **dele**, o melhor asset não está na web: é um print do próprio
+celular/sistema do usuário — real, em português, no contexto certo, sem direitos de terceiros e sem
+expor ninguém. **Peça.** Vale mais que qualquer rodada de busca.
+
+### A armadilha da página de bloqueio **[v2.4, medido]**
+
+Sites de SEO-spam (billionhands, findarticles, accio, spora, nollymove…) respondem ao hotlink com um
+**JPEG válido de 1344×768** contendo só o texto *"This site does not have permission to access or
+serve this content"*. Passa por qualquer filtro de tamanho e de domínio.
+
+Medido em **217 candidatas de 24 consultas** (26/08/2026):
+
+| O que veio | Quantas |
+|---|---|
+| página de bloqueio de hotlink | **86** |
+| mockup vetorial / render 3D / composição | 48 |
+| print ou fotografia real | 33 |
+| irrelevante | 50 |
+
+O `fetch_images_apify.py` agora tem `looks_like_block_page()`, que pega no pixel: bloqueio tem
+**saturação ≤ 0,0028, 13–16 tons e ≥ 47% de branco**; imagem legítima tem saturação ≥ 0,012 e ≥ 19
+tons. Verificado: **86/86 pegos, 0 falso positivo em 131**. O que ele barra vai para
+`<outdir>/rejeitadas/` e fica listado em `images.json` — nada some calado.
+
+> **Contra-intuitivo:** a página de bloqueio tem **16 tons**, não 2 — texto preto suavizado sobre
+> branco gera a rampa de cinza inteira. Um limite de "poucos tons" não pega nada. Quem separa é a
+> **saturação**: a página de bloqueio não tem um único pixel colorido.
+
+Duas consequências práticas:
+
+- **Peça 30 resultados por consulta**, não 3. Você vai descartar ~85%.
+- **Consulta abstrata atrai o spam.** "gráfico de conversão", "ampulheta tempo passando" e "dinheiro
+  na mesa" voltaram 100% bloqueio; "whatsapp", "excel line chart" e nome de produto voltaram
+  resultado real. Se uma consulta só devolve bloqueio, troque o termo por algo concreto em vez de
+  insistir.
+
+Quando o full falha ou vem bloqueado, o `thumbnailUrl` aponta para `encrypted-tbn0.gstatic.com`, que
+baixa sempre e costuma ter 500–740 px — suficiente, já que a inserção raramente passa de 1240 px.
+O script cai para ele sozinho (`--no-fallback-thumb` desliga).
+
+### A proporção manda mais que a resolução **[v2.4]**
+
+A faixa útil fica entre o topo e o `head_top` medido — tipicamente **~15% da altura do canvas**.
+Como a altura está travada, a **largura sai da proporção da imagem**, e ela precisa alcançar o
+mínimo de 0,31 da largura do canvas. Isso exige **proporção ≥ ~1,15:1**.
+
+**Print de celular em pé não serve.** A 0,46:1 ele renderiza com ~13% da largura — ilegível. Ou
+recorte uma **faixa horizontal** com a parte que comunica, ou procure **foto do aparelho na mão ou
+na mesa**, que já vem deitada. No IMG_1169 as três inserções ficaram entre 2,0:1 e 2,3:1.
+
 ### Suavidade é regra dura **[v2.3.1, medido]**
 
 O "tranco" tinha três causas, todas medidas por correlação de fase e corrigidas:

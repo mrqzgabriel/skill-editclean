@@ -1,6 +1,6 @@
 {
  "profile_name": "EditClean",
- "profile_version": "2.3.2",
+ "profile_version": "2.4.0",
  "derived_from": "ANALISE_TECNICA_EDICAO_VIDEO_REFERENCIA.md + medicao direta de 294 frames de 'Edit Pro/Video referencia.mp4' + preferencias do usuario (ver user_overrides)",
  "reference_material": {
   "duration_s": 152.2,
@@ -665,7 +665,7 @@
    ],
    "requires_api_key": false,
    "relevance_rule": "o termo de busca vem do que esta sendo dito naquele trecho; a imagem entra junto da mencao e sai quando o assunto muda",
-   "query_language": "en",
+   "query_language": "en ou pt -- o que importa e ser CONCRETO",
    "min_width_px": 900,
    "min_area_px": 480000,
    "quality_levels": {
@@ -673,13 +673,18 @@
     "boa": "lado maior >=1400px"
    },
    "prefer_quality": "boa",
-   "per_query": 3,
+   "per_query": 30,
    "visual_confirmation_required": true,
    "attribution_required": true,
    "on_nothing_relevant": "omitir a insercao e registrar em limitations",
    "origin": "regra editorial definida pelo usuario; nao deriva do relatorio, que declara nao ter transcrito nem interpretado a fala",
    "provider_note": "Acervo Creative Commons NAO cobre nicho comercial (corretora, leads, follow-up, trafego pago): so devolve foto documental e clipart, e os PNGs 'transparentes' do Openverse vem com o xadrez PINTADO na imagem. Usar Apify (actor hooli~google-images-scraper) com o token do usuario e RECORTAR marcas de terceiros. Avisar que tem direitos autorais.",
-   "avoid": "logotipo ou marca de CONCORRENTE do usuario; recortar quando aparecer"
+   "avoid": "logotipo ou marca de CONCORRENTE do usuario; recortar quando aparecer",
+   "per_query_note": "Era 3. O acervo descarta ~85%; pedir pouco devolve so lixo. Medido em 217 candidatas de 24 consultas.",
+   "acervo_hit_rate": "MEDIDO 26/08 em 217 candidatas: 86 pagina de bloqueio de hotlink, 48 mockup/render 3D/composicao, 33 print ou foto real, o resto irrelevante. Contar com descartar ~85% e buscar de sobra.",
+   "block_page_trap": "A ARMADILHA PRINCIPAL: sites de SEO-spam (billionhands, findarticles, accio, spora, nollymove...) respondem ao hotlink com um JPEG VALIDO de 1344x768 contendo so o texto 'This site does not have permission to access or serve this content'. Passa por qualquer filtro de tamanho e de dominio; so da para pegar no pixel. fetch_images_apify.py agora tem looks_like_block_page(), MEDIDO: bloqueio = cor <= 0.0028 / 13-16 tons / branco >= 0.474; imagem legitima = cor >= 0.012 / >= 19 tons. Cuidado: 'tons' do bloqueio e 16, nao 2 -- texto preto suavizado sobre branco gera a rampa de cinza inteira, entao limite de tons baixo nao pega nada. Quem separa e a saturacao. Verificado: 86/86 pegos, 0 falso positivo em 131.",
+   "thumbnail_fallback": "Quando o full falha ou vem bloqueado, o campo thumbnailUrl aponta para encrypted-tbn0.gstatic.com, que baixa sempre e costuma ter 500-740px -- suficiente para uma insercao, que raramente passa de 1240px de largura. Ligado por padrao no script.",
+   "query_note": "Consulta de conceito abstrato de negocio ('grafico de conversao', 'ampulheta tempo passando', 'dinheiro na mesa') atrai o SEO-spam e volta 100% bloqueio. Consulta com substantivo concreto e especifico ('whatsapp', 'excel line chart', nome de produto) volta resultado real. Se uma consulta devolver so bloqueio, nao insista nela: troque o termo por algo concreto."
   },
   "placement_zones": [
    "upper_third",
@@ -719,7 +724,9 @@
    "top_pct": 0.035,
    "max_width_pct": 0.86,
    "bottom_limit_pct": 0.205,
-   "note": "Nunca colar a imagem nas bordas. A faixa util fica ACIMA DA CABECA e e MEDIDA por scripts/detect_subject.py: head_top = testa_p02 - 0.30 x altura_da_face, e a insercao pode descer ate head_top - 0.012. O 0.205 abaixo e o fallback quando nao ha rosto detectado."
+   "note": "Nunca colar a imagem nas bordas. A faixa util fica ACIMA DA CABECA e e MEDIDA por scripts/detect_subject.py: head_top = testa_p02 - 0.30 x altura_da_face, e a insercao pode descer ate head_top - 0.012. O 0.205 abaixo e o fallback quando nao ha rosto detectado.",
+   "aspect_min": 1.15,
+   "aspect_note": "A faixa util fica entre top_pct e o head_top medido -- tipicamente ~15% da altura do canvas. Como a altura e travada, a LARGURA da insercao sai da proporcao da imagem, e ela precisa chegar ao minimo de 0.31 da largura do canvas. Isso exige proporcao >= ~1.15:1. PRINT DE CELULAR EM PE NAO SERVE: a 0.46:1 ele renderiza com ~13% da largura, ilegivel. Preferir imagem horizontal (1.6:1 a 3:1); de um print vertical, recortar uma FAIXA horizontal com a parte que comunica, ou procurar foto do aparelho na mao/na mesa, que ja vem deitada."
   },
   "placement_default": "top_band",
   "caption_collision_rule": "Legenda nunca na faixa ocupada por uma insercao no mesmo instante. Verificar sobreposicao temporal e mover a legenda."
@@ -897,6 +904,10 @@
   "images_source": "apify_google_images",
   "never_cut_while_speaking": true,
   "caption_style_v21": "halo difuso no lugar de sombra dura; sans sempre Bold; serifado 1.55x; espaco entre palavras 55%; corpo tipico 6%",
-  "dynamic_zoom_patterns": "punch-in cut com volta (release/hold) + push lento no respiro; pedido 26/08 'edicao dinamica, fluida e suave'"
+  "dynamic_zoom_patterns": "punch-in cut com volta (release/hold) + push lento no respiro; pedido 26/08 'edicao dinamica, fluida e suave'",
+  "images_must_be_real": true,
+  "images_must_be_real_note": "Pedido do usuario 26/08 ('imagem do whatsapp real mesmo como ele e e nao uma edit ou feito com IA, ou imagem feita no photoshop'). SO print de tela ou FOTOGRAFIA real. Estao PROIBIDOS: mockup vetorial, render 3D de celular, arte generativa e composicao de Photoshop -- mesmo os bem-feitos, mesmo os que 'parecem' o app. Sinais de mockup: 'Lorem ipsum', baloes uniformes repetidos, avatares como circulo chapado, horario 09:41 ou 12:30 repetido em todos os paineis, fundo colorido chapado atras do aparelho, 'template'/'UI kit'/'PSD'/'IMAGE NOT INCLUDED'. Sinais de print real: barra de status com hora/bateria/operadora, fotos de perfil de pessoas de verdade, textos de tamanhos irregulares, horarios variados, imperfeicao de foto de tela.",
+  "images_no_identifiable_private_people": true,
+  "images_no_identifiable_private_people_note": "Descartar print real que exponha NOME + FOTO de pessoa privada identificavel (lista de conversas com contatos reais, por exemplo). Num video comercial isso e risco -- ha decisao do STJ sobre divulgacao de print de conversa de WhatsApp. Preferir print sem nome visivel, ou recortar. Nao confundir com 'nome borrado pelo blog', que fica com cara de censura e tambem deve ser evitado por estetica."
  }
 }
