@@ -172,7 +172,8 @@ O script já aplica **todas** as regras do perfil e imprime um relatório confer
 
 - fronteiras que **preservam a fala** (§ *Regras invioláveis* 5);
 - curva de ritmo por terços escalada pela duração;
-- escalas de zoom com salto garantido em cada corte;
+- escalas de zoom com salto garantido em cada corte, mais os **padrões dinâmicos** (punch-in cut
+  com volta suave, punch com reabertura por corte, push lento no respiro — ver spec §5);
 - blocos de legenda com quebra automática, corpo por bloco e **posição única centralizada**;
 - timeline já descontando o encurtamento do `xfade`.
 
@@ -268,6 +269,9 @@ Estão corrigidas no `render_edit.py`. **Não reintroduza:**
 - **`xfade` exige timebase idêntico** nos dois lados → `settb=AVTB` antes.
 - **Overlay de imagem não usa `-loop 1`.** Cria stream infinito e o render trava; a imagem entra como
   frame único e o filtro `loop` replica pela contagem exata.
+- **Zoom nunca se move em cima do corte.** `start_offset` + `ease_in_out` em tudo; supersampling
+  adaptativo (2,5–6×) para movimento lento; renormalização desloca o settle inteiro. A abertura é
+  gaussiano frame a frame — degraus largos pulsam e crossfade nítido+desfocado vira dupla exposição.
 - **Fade da legenda é por palavra.** `\fad` no evento inteiro faz o bloco piscar a cada palavra,
   porque cada estado do karaokê é um evento ASS novo. Usar
   `\alpha&HFF&\t(0,ms,\alpha&H00&)` só na palavra nova.

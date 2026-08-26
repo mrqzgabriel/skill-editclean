@@ -250,8 +250,10 @@ def place_transitions(bounds, prof, n_trans=3):
 # zoom
 # --------------------------------------------------------------------------
 
-def solve_zoom(segs, prof, face_y=0.22):
-    """Escolhe escala de repouso por segmento garantindo salto visivel no corte."""
+def solve_zoom(segs, prof, face_y=0.22, toks=None, avoid_punch_ids=None):
+    """Escolhe escala de repouso por segmento garantindo salto visivel no corte,
+    e por cima aplica os PADROES dinamicos (v2.3): punch-in cut com volta e
+    push lento no respiro. Ver zooms.patterns no perfil (com a pesquisa)."""
     z = prof["zooms"]
     jmp = z["jump_between_segments"]
     lo_s, hi_s = 1.000, 1.080
@@ -304,19 +306,179 @@ def solve_zoom(segs, prof, face_y=0.22):
         for i in range(n):
             best[i] = grid[i % len(grid)]
 
+    settle = z.get("settle") or {}
+    st_off = float(settle.get("start_offset_s", 0.12))
+    st_dur = float(settle.get("duration_s", 0.60))
+    st_ease = settle.get("easing", "ease_in_out")
     for i, s in enumerate(segs):
         b = best[i] if best[i] else 1.0
         f = frm(i, b)
+        off = 0.0 if i == 0 else min(st_off, s["duration"] * 0.25)
         s["zoom"] = {
             "preset_id": "zoom_%s_%02d" % (dirs[i], i + 1),
             "scale_from": f, "scale_to": b,
-            "easing": z["easing_default"],
+            "easing": st_ease,
             "anchor_x_pct": 0.5,
             "anchor_y_pct": 0.5 if dirs[i] == "out" else face_y,
-            "start_offset": 0.0,
-            "duration": round(min(dur_t, s["duration"] * 0.85), 3),
+            "start_offset": round(off, 3),
+            "duration": round(max(0.2, min(st_dur, s["duration"] * 0.8 - off)), 3),
             "confidence": 64, "origin": "inferred",
         }
+
+    # ------------------------------------------------------------------
+    # padroes dinamicos por cima da base (v2.3)
+    # ------------------------------------------------------------------
+    pat = z.get("patterns") or {}
+    if not pat or len(segs) < 4:
+        return segs
+    avoid = set(avoid_punch_ids or [])
+    total_dur = sum(s["duration"] for s in segs)
+
+    def _renorm_jump(next_idx, prev_to):
+        """A fronteira depois de um padrao volta para a faixa de salto normal.
+
+        Desloca o settle INTEIRO (from e to juntos): mover so o from esticava o
+        settle para ~5% e ele virava uma varredura rapida (pico ~6 px/frame,
+        medido) - justamente o tranco que estamos tirando."""
+        if next_idx >= len(segs):
+            return
+        fz = segs[next_idx]["zoom"]
+        if fz["preset_id"].startswith(("punch", "creep")):
+            return
+        j = abs(fz["scale_from"] - prev_to)
+        if j < jmp["min_delta_gap_cut"] or j > 0.06:
+            sgn = 1.0 if fz["scale_from"] >= prev_to else -1.0
+            delta_settle = fz["scale_to"] - fz["scale_from"]
+            new_from = round(prev_to + sgn * 0.028, 4)
+            new_to = round(new_from + delta_settle, 4)
+            if not (lo_s <= new_from <= hi_s and lo_s <= new_to <= hi_s):
+                new_from = round(prev_to - sgn * 0.028, 4)
+                new_to = round(new_from + delta_settle, 4)
+            fz["scale_from"] = round(min(hi_s, max(lo_s, new_from)), 4)
+            fz["scale_to"] = round(min(hi_s, max(lo_s, new_to)), 4)
+
+    # ---- punch-in cut: corte para mais perto no momento de enfase
+    pu = pat.get("punch") or {}
+    if pu:
+        d_lo, d_hi = pu.get("scale_delta_range", [0.10, 0.14])
+        s_lo, s_hi = pu.get("seg_duration_s", [1.0, 4.2])
+        rel_lo, rel_hi = pu.get("release_duration_s", [1.4, 2.6])
+        max_p = max(1, int(total_dur / 60.0 * pu.get("per_minute_max", 3.0)))
+        min_gap = pu.get("min_gap_s", 6.0)
+
+        def seg_score(sg):
+            ts = [t for t in (toks or [])
+                  if sg["src_start"] - 1e-6 <= t["start"] < sg["src_end"]]
+            sc = 0.0
+            for t in ts:
+                w = t["text"]
+                if re.search(r"\d", w):
+                    sc += 3.0                       # numero = pico de conteudo
+                if len(_strip_accents(w)) >= 8:
+                    sc += 1.0
+                if w[:1].isupper():
+                    sc += 0.5
+            return sc
+
+        cands = sorted(((seg_score(segs[i]), i) for i in range(1, len(segs) - 1)
+                        if segs[i]["id"] not in avoid
+                        and segs[i - 1]["id"] not in avoid
+                        and segs[i + 1]["id"] not in avoid
+                        and s_lo <= segs[i]["duration"] <= s_hi), reverse=True)
+        chosen = []
+        for sc, i in cands:
+            if len(chosen) >= max_p or sc <= 0:
+                break
+            if any(abs(segs[i]["src_start"] - segs[j]["src_start"]) < min_gap
+                   or abs(i - j) <= 1 for j in chosen):
+                continue
+            chosen.append(i)
+        chosen.sort()
+
+        kinds = ("release", "hold", "release")       # ~60/40, comecando suave
+        for k, i in enumerate(chosen):
+            sg = segs[i]
+            prev_to = segs[i - 1]["zoom"]["scale_to"]
+            delta = d_lo + (d_hi - d_lo) * (((k * 3) % 4) / 3.0)
+            P = round(min(1.16, prev_to + delta), 4)
+            if kinds[k % 3] == "release":
+                # ASSENTA fechado (offset) e o zoom volta suave, comecando parado
+                r_off = min(float(pu.get("release_start_offset_s", 0.35)),
+                            sg["duration"] * 0.25)
+                to = round(min(1.03, sg["zoom"]["scale_to"]), 4)
+                dur = round(min(rel_hi, max(rel_lo, sg["duration"] * 0.7),
+                                sg["duration"] * 0.85 - r_off), 3)
+                sg["zoom"] = {"preset_id": "punch_release_%02d" % (k + 1),
+                              "scale_from": P, "scale_to": to,
+                              "easing": pu.get("release_easing", "ease_in_out"),
+                              "anchor_x_pct": 0.5, "anchor_y_pct": face_y,
+                              "start_offset": round(r_off, 3), "duration": dur,
+                              "confidence": 70, "origin": "inferred"}
+                _renorm_jump(i + 1, to)
+            else:
+                # segura fechado, ESTATICO (zero movimento = zero quantizacao);
+                # o CORTE seguinte devolve o plano aberto
+                sg["zoom"] = {"preset_id": "punch_hold_%02d" % (k + 1),
+                              "scale_from": P, "scale_to": P,
+                              "easing": "ease_out",
+                              "anchor_x_pct": 0.5, "anchor_y_pct": face_y,
+                              "start_offset": 0.0, "duration": 0.1,
+                              "confidence": 70, "origin": "inferred"}
+                nz = segs[i + 1]["zoom"]
+                if not nz["preset_id"].startswith(("punch", "creep")):
+                    dset = nz["scale_from"] - nz["scale_to"]
+                    new_to = round(min(nz["scale_to"], max(lo_s, P - 0.10)), 4)
+                    new_from = round(max(lo_s, min(hi_s, new_to + dset)), 4)
+                    nz["scale_from"], nz["scale_to"] = new_from, new_to
+                    _renorm_jump(i + 2, new_to)
+
+    # ---- push lento no plano-respiro (o segmento mais longo)
+    cr = pat.get("creep") or {}
+    if cr:
+        pool = [(segs[i]["duration"], i) for i in range(len(segs))
+                if segs[i]["duration"] >= cr.get("min_seg_s", 4.5)
+                and not segs[i]["zoom"]["preset_id"].startswith("punch")
+                and segs[i]["id"] not in avoid]
+        if pool:
+            _, ci = max(pool)
+            sg = segs[ci]
+            cum = sum(x["duration"] for x in segs[:ci])
+            frac = (cum + sg["duration"] / 2.0) / max(1e-6, total_dur)
+            direction = "in" if frac < 2.0 / 3.0 else "out"
+            d_in, d_out = cr.get("delta_in", 0.06), cr.get("delta_out", 0.05)
+            prev_to = segs[ci - 1]["zoom"]["scale_to"] if ci else None
+            # o ponto de partida cede espaco para o percurso completo do creep
+            if direction == "in":
+                base_from = round(min(sg["zoom"]["scale_from"], hi_s - d_in), 4)
+            else:
+                base_from = round(max(sg["zoom"]["scale_from"], lo_s + d_out), 4)
+            # e a fronteira de entrada volta para a faixa de salto normal
+            if prev_to is not None:
+                j = abs(base_from - prev_to)
+                if j < jmp["min_delta_gap_cut"] or j > 0.06:
+                    room_up = (hi_s - d_in - prev_to) if direction == "in" else (hi_s - prev_to)
+                    sgn = 1.0 if room_up >= 0.028 else -1.0
+                    base_from = round(min(hi_s - (d_in if direction == "in" else 0.0),
+                                          max(lo_s + (d_out if direction == "out" else 0.0),
+                                              prev_to + sgn * 0.028)), 4)
+            if direction == "in":
+                target = round(base_from + d_in, 4)
+                anchor = face_y
+            else:
+                target = round(base_from - d_out, 4)
+                anchor = 0.5
+            if abs(target - base_from) >= 0.02:
+                c_off = min(float(cr.get("start_offset_s", 0.25)), sg["duration"] * 0.1)
+                sg["zoom"]["scale_from"] = base_from
+                sg["zoom"] = {"preset_id": "creep_%s" % direction,
+                              "scale_from": base_from, "scale_to": target,
+                              "easing": cr.get("easing", "ease_in_out"),
+                              "anchor_x_pct": 0.5, "anchor_y_pct": anchor,
+                              "start_offset": round(c_off, 3),
+                              "duration": round(min(sg["duration"] * 0.92 - c_off,
+                                                    cr.get("max_duration_s", 7.0)), 3),
+                              "confidence": 68, "origin": "inferred"}
+                _renorm_jump(ci + 1, target)
     return segs
 
 
@@ -684,16 +846,22 @@ def main():
                         "reason": "cauda muda apos a ultima palavra",
                         "confidence": 90, "origin": "measured"})
     segs = [s for s in segs if s["src_end"] - s["src_start"] > 0.12]
+
+    # o primeiro segmento precisa comportar a abertura (~0,7 s + folga);
+    # se o primeiro corte cair cedo demais, funde com o segundo segmento
+    trans_resumes = {b["resume"] for b in trans_bounds}
+    while (len(segs) > 1
+           and segs[0]["src_end"] - segs[0]["src_start"] < 0.95
+           and segs[1]["src_start"] not in trans_resumes):
+        segs[0]["src_end"] = segs[1]["src_end"]
+        segs[0]["kind_after"] = segs[1]["kind_after"]
+        del segs[1]
+
     for i, s in enumerate(segs):
         s["id"] = "S%03d" % (i + 1)
         s["duration"] = round(s["src_end"] - s["src_start"], 4)
 
-    face_y = 0.22
-    if (subj or {}).get("detected"):
-        face_y = subj["measured"]["face_center_y_pct"]
-    solve_zoom(segs, prof, face_y)
-
-    # transicoes -> ids reais
+    # transicoes -> ids reais (antes do zoom: punch nunca cola em transicao)
     transitions = []
     for b in trans_bounds:
         nxt = next((s for s in segs if abs(s["src_start"] - b["resume"]) < 1e-6), None)
@@ -708,6 +876,12 @@ def main():
             "start": 0.0, "end": 0.0, "confidence": 80, "origin": "inferred",
             "evidence": "mudanca de bloco; crossfade dentro do silencio mantido",
         })
+
+    face_y = 0.22
+    if (subj or {}).get("detected"):
+        face_y = subj["measured"]["face_center_y_pct"]
+    avoid_ids = {sid for t in transitions for sid in t["between"]}
+    solve_zoom(segs, prof, face_y, toks, avoid_ids)
 
     # timeline de saida (xfade encurta)
     tr_next = {t["between"][1]: t["duration"] for t in transitions}
@@ -740,6 +914,21 @@ def main():
             if x < s["src_start"]:
                 return s["out_start"]
         return total
+
+    # abertura: vira o zoom do PRIMEIRO segmento (herda o supersampling) e o
+    # desfoque vira eventos blurs[] com sigma decrescente (continuo, sem pulsar)
+    op = prof.get("opening") or {}
+    blurs = []
+    if op.get("integrated_into_first_segment") and segs:
+        odur = min(op.get("duration_ms", 700) / 1000.0, segs[0]["duration"] * 0.6)
+        s0z = segs[0]["zoom"]
+        segs[0]["zoom"] = {"preset_id": "opening_blur_zoom_out",
+                           "scale_from": round(float(op.get("scale_start", 1.08)), 4),
+                           "scale_to": s0z["scale_to"],
+                           "easing": op.get("easing", "ease_out"),
+                           "anchor_x_pct": 0.5, "anchor_y_pct": 0.5,
+                           "start_offset": 0.0, "duration": round(odur, 3),
+                           "confidence": 80, "origin": "inferred"}
 
     forced = json.load(open(args.accent, encoding="utf-8")) if args.accent else None
     anchor_pct = prof["captions"]["layout"]["anchor_fixed_top_pct"]
@@ -844,7 +1033,7 @@ def main():
                    "movflags": prof["export"]["movflags"]},
         "reframe": {"mode": "none", "confidence": 98, "origin": "measured"},
         "segments": segs, "removed_segments": removed,
-        "cuts": cuts, "transitions": transitions, "moves": [], "blurs": [],
+        "cuts": cuts, "transitions": transitions, "moves": [], "blurs": blurs,
         "captions": {
             "enabled": bool(blocks), "source": "faster_whisper", "language": "pt",
             "font_primary": "Helvetica Neue", "font_accent": "Playfair Display",
@@ -875,7 +1064,10 @@ def main():
         },
         "overlays": overlays,
         "opening": {"enabled": True, "type": "blur_zoom_out",
-                    "duration": prof["opening"]["duration_ms"] / 1000.0,
+                    "duration": (min(op.get("duration_ms", 700) / 1000.0,
+                                     segs[0]["duration"] * 0.6)
+                                 if op.get("integrated_into_first_segment")
+                                 else prof["opening"]["duration_ms"] / 1000.0),
                     "blur_sigma_start": prof["opening"]["blur_sigma_start"],
                     "scale_start": prof["opening"]["scale_start"],
                     "easing": prof["opening"]["easing"],
@@ -924,6 +1116,14 @@ def main():
         print("sujeito          : rosto em %.0f%% das amostras | queixo %.3f | cabeca %.3f | insercao ate %.3f"
               % (100 * subj["detection_rate"], m["chin_pct"]["p98"],
                  dv["head_top_pct"], dv["overlay_bottom_limit_pct"]))
+    pats = [sg for sg in segs if sg["zoom"]["preset_id"].startswith(("punch", "creep"))]
+    if pats:
+        print("padroes de zoom  : %d" % len(pats))
+        for sg in pats:
+            zz = sg["zoom"]
+            print("   %-6s %-17s %.3f -> %.3f em %.2fs  (seg %.2fs, out %.2f)"
+                  % (sg["id"], zz["preset_id"], zz["scale_from"], zz["scale_to"],
+                     zz["duration"], sg["duration"], sg["out_start"]))
     print("insercoes        : %d (%.1f/min)" % (len(overlays), len(overlays) / mins))
     print("plano            : %s" % out)
     return 0

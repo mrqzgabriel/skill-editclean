@@ -573,11 +573,15 @@ def build_zoom_chain(seg, label_in, label_out, W, H, fps):
     # (2 s viram 40 s). settb+setpts reconstroem o tempo a partir do indice do
     # frame e deixam a cadeia consistente.
     #
-    # Superamostragem 2.5x: o zoompan arredonda x/y para pixel INTEIRO a cada
-    # frame; em zooms sutis (2-3%) o passo por frame fica ~1px e o arredondamento
-    # vira tremida visivel. Ampliando antes, o erro de arredondamento cai para
-    # ~0.4px na saida e o movimento fica liso.
-    ssw, ssh = even(W * 2.5), even(H * 2.5)
+    # Superamostragem ADAPTATIVA: o zoompan arredonda x/y para pixel INTEIRO a
+    # cada frame. Em movimento normal, 2.5x basta; em movimento LENTO (creep de
+    # ~0.3 px/frame) o arredondamento a 2.5x vira gagueira anda-para-anda
+    # (0,75-0,05-0,75 px, medido). O fator sobe ate 6x conforme a velocidade cai,
+    # para o passo no grid superamostrado ficar >= ~2 px/frame.
+    diag_half = 0.5 * (W * W + H * H) ** 0.5
+    est_speed = diag_half * abs(s1 - s0) / max(1e-6, dur * float(fps))
+    ss = min(6.0, max(2.5, 2.0 / max(1e-6, est_speed)))
+    ssw, ssh = even(W * ss), even(H * ss)
     return [
         "[%s]scale=%dx%d:flags=lanczos[%s_ss]" % (label_in, ssw, ssh, label_out),
         "[%s_ss]zoompan=z='%s':x='(iw-iw/zoom)*%.4f':y='(ih-ih/zoom)*%.4f':"
@@ -683,38 +687,30 @@ def build_filtergraph(plan, ass_path=None, overlay_inputs=None):
     # ---- 3. abertura
     op = plan.get("opening") or {}
     if op.get("enabled") and op.get("type") == "blur_zoom_out":
-        odur = max(0.05, float(op.get("duration", 0.367)))
-        sigma0 = float(op.get("blur_sigma_start", 26))
-        scale0 = float(op.get("scale_start", 1.14))
-        easing = op.get("easing", "ease_out")
-        # zoompan (nao crop): a escala varia no tempo e o crop avalia w/h so na
-        # configuracao. Apos 'odur' a progressao satura em 1 e z volta a 1.0.
-        prog = "clip(in/%.3f\\,0\\,1)" % max(1.0, odur * fps)
-        curve = easing_expr(easing, prog)
-        zexpr = "(%.5f+(%.5f)*%s)" % (scale0, 1.0 - scale0, curve)
-        nv = "vopen"
-        parts.append(
-            "[%s]zoompan=z='%s':x='(iw-iw/zoom)/2':y='(ih-ih/zoom)/2':"
-            "d=1:s=%dx%d:fps=%s,setsar=1,settb=AVTB,setpts=N/%s/TB[%s_c]"
-            % (cur_v, zexpr, W, H, fps, fps, nv)
-        )
-        # sigma decrescente: gblur nao aceita expressao temporal, entao
-        # fazemos blend por degraus curtos (5 faixas) dentro da abertura.
-        steps = 5
-        prev = "%s_c" % nv
-        for k in range(steps):
-            t0 = odur * k / steps
-            t1 = odur * (k + 1) / steps
-            frac = 1.0 - ((k + 0.5) / steps)
-            sg = max(0.1, sigma0 * frac)
-            lbl = "%s_b%d" % (nv, k)
-            parts.append(
-                "[%s]gblur=sigma=%.2f:enable='between(t,%.4f,%.4f)'[%s]"
-                % (prev, sg, t0, t1, lbl)
-            )
+        # v2.3.2: o MOVIMENTO da abertura vive no zoom do primeiro segmento
+        # (superamostrado). Aqui fica so o desfoque GAUSSIANO que resolve, com
+        # sigma animado FRAME A FRAME: um gblur por frame, sigma seguindo
+        # (1-p)^2 (resolve rapido e assenta). Historico: degraus largos (~2
+        # frames) pulsavam; crossfade nitido+desfocado dava cara de dupla
+        # exposicao - o usuario pediu o gaussiano de verdade.
+        odur = max(0.05, float(op.get("duration", 0.7)))
+        sigma0 = float(op.get("blur_sigma_start", 18))
+        n = max(2, int(math.ceil(odur * float(fps))))
+        prev = cur_v
+        k_used = 0
+        for k in range(n):
+            rem = (1.0 - (k + 0.5) / n) ** 2
+            sg = sigma0 * rem
+            if sg < 0.25:
+                break
+            t0, t1 = k / float(fps), (k + 1) / float(fps)
+            lbl = "vop%d" % k
+            parts.append("[%s]gblur=sigma=%.2f:enable='between(t,%.4f,%.4f)'[%s]"
+                         % (prev, sg, t0, t1, lbl))
             prev = lbl
-        parts.append("[%s]null[%s]" % (prev, nv))
-        cur_v = nv
+            k_used += 1
+        parts.append("[%s]null[vopen]" % prev)
+        cur_v = "vopen"
     elif op.get("enabled") and op.get("type") == "fade_in":
         odur = max(0.05, float(op.get("duration", 0.3)))
         nv = "vopen"

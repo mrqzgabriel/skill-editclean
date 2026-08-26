@@ -114,6 +114,28 @@ de 0,08 px entre passos consecutivos.
 
 O relatório mede ≤ 333 ms. O Gabriel pediu efeitos mais suaves: use **~550 ms** com `ease_out`.
 
+### Padrões dinâmicos — punch-in cut, volta e push lento **[v2.3, pesquisado]**
+
+Pesquisa (premiumbeat, howtofilmschool, firecut, air.io, 26/08): o punch-in profissional é um
+**corte seco para ~+10–15% de escala no momento de ênfase** — a dica principal, o número, a oferta.
+Nunca aleatório: "se o corte aparece num momento qualquer, o espectador nota a edição em vez do
+ponto". Depois o punch **volta ao aberto** — e a volta lenta é o que lê como cinematográfico
+("slow = cinematic, fast = cheap"). Ritmo geral: estimular → acalmar → re-engajar.
+
+Três padrões, aplicados pelo `build_plan.py` por cima da base (config em `zooms.patterns`):
+
+| Padrão | O que faz | Onde entra |
+|---|---|---|
+| `punch_release` | corta para +10–14% no rosto e o zoom **volta suave** (1,4–2,6 s, ease_out) até o repouso | momento de virada/revelação |
+| `punch_hold` | corta para +10–14%, **segura** fechado; o corte seguinte reabre o plano (o vizinho é forçado a repouso baixo para a reabertura ser visível) | a oferta, o número |
+| `creep_in` / `creep_out` | push lento de 5–6% em 2–7 s, ease_in_out, no rosto | o plano-respiro (segmento mais longo) |
+
+Colocação automática por conteúdo: pontua os segmentos (número = +3, palavra longa = +1) e escolhe
+os picos, com teto de **3/min**, espaçamento ≥ 6 s, nunca no primeiro segmento nem colado em
+transição, nunca dois vizinhos. No IMG_1171 caíram em "Foi aí que eu **descobri**"
+(punch_release), na lista de benefícios (creep_in de 8,5 s) e em "conteúdo **100%** online
+gratuito" (punch_hold) — exatamente os picos do roteiro.
+
 ### Salto de escala entre segmentos
 
 Para o corte seco ficar visível **sem transição**, a escala de repouso precisa diferir entre
@@ -292,12 +314,28 @@ Use `scripts/fetch_images_apify.py` (Google Images via Apify, token em `.credent
 4. Se nada pertinente aparecer, **omita** e registre em `limitations`. Nunca use asset genérico de
    preenchimento.
 
+### Suavidade é regra dura **[v2.3.1, medido]**
+
+O "tranco" tinha três causas, todas medidas por correlação de fase e corrigidas:
+
+1. **Movimento em cima do corte**: `ease_out` tem velocidade máxima no primeiro frame — a imagem já
+   deslizava a ~3 px/frame no frame seguinte ao corte. Agora **todo zoom tem `start_offset`**
+   (0,12 s nos settles, 0,35 s nos punches) e easing `ease_in_out`: o corte assenta parado e o
+   movimento entra e sai com velocidade zero. O punch_hold é **estático de verdade**.
+2. **Gagueira em movimento lento**: com supersampling fixo 2,5×, o creep (~0,3 px/frame) alternava
+   0,75 → 0,05 → 0,75 px. O fator agora é **adaptativo** (2,5× a 6× conforme a velocidade).
+3. **Renormalização esticando settles**: mover só o `scale_from` de um vizinho criava settles de ~5%
+   (varredura de 6,7 px/frame). O renorm desloca o settle **inteiro** (from e to juntos).
+
 ## 10. Abertura
 
 Mecanismo único e reconhecível:
-- Duração **550 ms**, easing `ease_out`. **[preferência do Gabriel]** — o relatório
-  mede 367 ms; ele pediu efeitos mais suaves, com desfoque e escala iniciais menores (sigma 20,
-  escala 1,10 em vez de 26 / 1,14).
+- Duração **700 ms**, easing `ease_out`, escala 1,08, sigma 18. **[preferência do Gabriel]**
+- **[v2.3.2]** O movimento é o **zoom do primeiro segmento** (herda o supersampling; se o primeiro
+  corte cair antes de ~0,95 s, o `build_plan` funde os dois primeiros segmentos). O desfoque é
+  **gaussiano com sigma animado frame a frame** (um `gblur` por frame, sigma = σ₀·(1−p)²).
+  Não use degraus largos (pulsam) nem crossfade nítido+desfocado (cara de dupla exposição — o
+  usuário rejeitou: "tem que ser aquele desfoque gaussiano").
 - Começa em **close desfocado e ampliado** e resolve simultaneamente **desfoque → 0** e
   **escala → 1,0**. Os valores concretos (escala inicial ~1,14, sigma ~26) são **parâmetros de
   reprodução**, não medições: o relatório mede a abertura por variância do Laplaciano (2,08 no frame
