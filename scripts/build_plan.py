@@ -250,7 +250,7 @@ def place_transitions(bounds, prof, n_trans=3):
 # zoom
 # --------------------------------------------------------------------------
 
-def solve_zoom(segs, prof):
+def solve_zoom(segs, prof, face_y=0.22):
     """Escolhe escala de repouso por segmento garantindo salto visivel no corte."""
     z = prof["zooms"]
     jmp = z["jump_between_segments"]
@@ -312,7 +312,7 @@ def solve_zoom(segs, prof):
             "scale_from": f, "scale_to": b,
             "easing": z["easing_default"],
             "anchor_x_pct": 0.5,
-            "anchor_y_pct": 0.5 if dirs[i] == "out" else 0.22,
+            "anchor_y_pct": 0.5 if dirs[i] == "out" else face_y,
             "start_offset": 0.0,
             "duration": round(min(dur_t, s["duration"] * 0.85), 3),
             "confidence": 64, "origin": "inferred",
@@ -487,7 +487,8 @@ def greedy_lines(items, meas, usable, fs):
     return lines
 
 
-def build_captions(toks, spans, segs, total, prof, W, H, src2out, seg_of, forced_styles=None):
+def build_captions(toks, spans, segs, total, prof, W, H, src2out, seg_of,
+                   forced_styles=None, anchor_pct=None):
     cap = prof["captions"]
     t = cap["typography"]
     lay = cap["layout"]
@@ -600,10 +601,35 @@ def main():
     ap.add_argument("--head", type=float, default=None)
     ap.add_argument("--tail", type=float, default=None)
     ap.add_argument("--no-captions", action="store_true")
+    ap.add_argument("--no-subject", action="store_true",
+                    help="nao detectar o sujeito; usa as alturas fixas do perfil")
+    ap.add_argument("--subject-samples", type=int, default=40)
     args = ap.parse_args()
 
     prof = json.load(open(PROFILE_PATH, encoding="utf-8"))
     man = json.load(open(os.path.join(args.work, "manifest.json"), encoding="utf-8"))
+
+    # onde esta o sujeito: a legenda e as insercoes se posicionam a partir DISSO,
+    # nao de um numero fixo medido noutro video
+    subj = None
+    sp = os.path.join(args.work, "subject.json")
+    if os.path.exists(sp):
+        try:
+            subj = json.load(open(sp, encoding="utf-8"))
+        except Exception:
+            subj = None
+    if subj is None and not args.no_subject:
+        try:
+            sys.path.insert(0, HERE)
+            from detect_subject import detect as _detect
+            subj = _detect(args.source, samples=args.subject_samples, quiet=True)
+            with open(sp, "w", encoding="utf-8") as fh:
+                json.dump(subj, fh, indent=1, ensure_ascii=False)
+        except Exception as exc:
+            subj = {"detected": False, "reason": "falha ao detectar: %s" % exc}
+    if not (subj or {}).get("detected"):
+        print("[subject] nao detectado (%s) -> usando os valores do perfil"
+              % (subj or {}).get("reason", "desativado"))
     src = man["source"]
     fps = float(src["video"]["fps"]) or 30.0
     dur = float(src["duration"])
@@ -662,7 +688,10 @@ def main():
         s["id"] = "S%03d" % (i + 1)
         s["duration"] = round(s["src_end"] - s["src_start"], 4)
 
-    solve_zoom(segs, prof)
+    face_y = 0.22
+    if (subj or {}).get("detected"):
+        face_y = subj["measured"]["face_center_y_pct"]
+    solve_zoom(segs, prof, face_y)
 
     # transicoes -> ids reais
     transitions = []
@@ -713,10 +742,14 @@ def main():
         return total
 
     forced = json.load(open(args.accent, encoding="utf-8")) if args.accent else None
+    anchor_pct = prof["captions"]["layout"]["anchor_fixed_top_pct"]
+    if (subj or {}).get("detected"):
+        anchor_pct = subj["derived"]["caption_anchor_pct"]
+
     blocks, fs_base = ([], int(round(H * 0.0574)))
     if toks and not args.no_captions:
         blocks, fs_base = build_captions(toks, spans, segs, total, prof, W, H,
-                                         src2out, seg_of, forced)
+                                         src2out, seg_of, forced, anchor_pct)
 
     overlays = []
     if args.overlays:
@@ -730,7 +763,10 @@ def main():
                 iw, ih = Image.open(path).size
             except Exception:
                 pass
-            max_h = (o.get("bottom_limit_pct", sm["bottom_limit_pct"]) - sm["top_pct"]) * H
+            bottom_limit = sm["bottom_limit_pct"]
+            if (subj or {}).get("detected"):
+                bottom_limit = subj["derived"]["overlay_bottom_limit_pct"]
+            max_h = (o.get("bottom_limit_pct", bottom_limit) - sm["top_pct"]) * H
             if iw and ih:
                 w_px = min(W * sm["max_width_pct"], max_h * iw / float(ih))
             else:
@@ -783,8 +819,10 @@ def main():
         "notes": [
             "Fronteiras escolhidas preservando a fala: folga de %d ms, pausa curta vira corte sem remocao, transicao dentro do silencio mantido."
             % prof["cuts"]["speech_safety"]["edge_padding_ms"],
-            "Legendas em posicao vertical unica (%.2f) e sempre centralizadas."
-            % prof["captions"]["layout"]["anchor_fixed_top_pct"],
+            ("Legendas em posicao vertical unica (%.3f) e sempre centralizadas; altura %s."
+             % (anchor_pct, "MEDIDA neste video (queixo em %.3f)"
+                % subj["measured"]["chin_pct"]["p98"] if (subj or {}).get("detected")
+                else "do perfil (rosto nao detectado)")),
             "Serifado composto %.2fx maior que o sem-serifa." % cap["typography"]["accent_size_ratio"],
         ],
         "limitations": [],
@@ -815,7 +853,7 @@ def main():
             "line_height_ratio": cap["typography"]["line_height_ratio"],
             "side_margin_pct": cap["layout"]["side_margin_pct"],
             "tracking_px": cap["typography"]["tracking_px_at_reference"] * (W / 720.0),
-            "anchors": {"lower_default": cap["layout"]["anchor_fixed_top_pct"],
+            "anchors": {"lower_default": anchor_pct,
                         "footer": cap["layout"]["anchors"]["footer"]["bbox_top_pct"],
                         "upper": cap["layout"]["anchors"]["upper"]["bbox_top_pct"]},
             "max_width_pct": cap["layout"]["max_width_pct_of_canvas"],
@@ -879,8 +917,13 @@ def main():
         print("legendas         : %d blocos, corpo %d-%d px, accent %.1f%% (perfil %.0f%%)"
               % (len(blocks), min(fss), max(fss), 100.0 * na / nw,
                  100 * cap["emphasis"]["accent_share_of_words"]))
-        print("                   posicao unica %.2f, todas centralizadas"
-              % cap["layout"]["anchor_fixed_top_pct"])
+        print("                   posicao unica %.3f, todas centralizadas%s"
+              % (anchor_pct, " (medida no video)" if (subj or {}).get("detected") else " (perfil)"))
+    if (subj or {}).get("detected"):
+        m, dv = subj["measured"], subj["derived"]
+        print("sujeito          : rosto em %.0f%% das amostras | queixo %.3f | cabeca %.3f | insercao ate %.3f"
+              % (100 * subj["detection_rate"], m["chin_pct"]["p98"],
+                 dv["head_top_pct"], dv["overlay_bottom_limit_pct"]))
     print("insercoes        : %d (%.1f/min)" % (len(overlays), len(overlays) / mins))
     print("plano            : %s" % out)
     return 0

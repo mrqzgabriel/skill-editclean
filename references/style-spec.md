@@ -229,9 +229,19 @@ cantos". O padrão é:
 A única variação que resta é o bloco crescer para baixo quando entra a segunda linha — isso é o
 karaokê funcionando, não deslocamento.
 
-**Como escolher o valor em outro vídeo:** meça em vários frames onde o **queixo desce mais** (a
-pessoa se inclina ao falar) e deixe 0,08–0,10 de folga abaixo disso. No IMG_1171 o queixo chega a
-0,53, daí 0,62. Confira também que a base do bloco de 2 linhas no corpo máximo não passe de ~0,80.
+**A altura não é um número fixo — é medida no vídeo.** `scripts/detect_subject.py` detecta o rosto
+(YuNet) em 40 amostras e deriva:
+
+```
+âncora = queixo_p98 + max(0,035 ; 0,20 × altura_da_face)     presa em [0,42 ; 0,72]
+```
+
+No IMG_1171: queixo em 0,559, face de 0,228 → âncora **0,605**. Antes esse número era medido a olho
+(0,62) e só valia para aquele enquadramento — numa pessoa mais perto ou mais afastada da câmera,
+errava. O `0,62` que sobrou no perfil é apenas o **fallback** para quando não há rosto detectado.
+
+O mesmo `subject.json` define até onde uma inserção no topo pode descer
+(`head_top = testa_p02 − 0,30 × altura_da_face`), que também era medido a mão.
 
 Só use âncora diferente se o usuário pedir, ou se uma **inserção gráfica** ocupar a mesma faixa
 naquele instante (aí a legenda sai da frente).
@@ -257,8 +267,9 @@ contínua, a troca é seca (substituição), sem pausa artificial.
 | Largura máxima | **86%** (nunca colada nas laterais) |
 | Base da imagem | acima de **~20,5%**, sempre acima de onde começa a cabeça |
 
-**Meça onde começa a cabeça** nos frames extraídos — é isso que define a faixa livre. No IMG_1171 o
-cabelo começava em 23,7% da altura, então a faixa útil era 3,5%–20,5%.
+**A faixa livre vem do `subject.json`**, não de medição manual: `head_top` é derivado da testa
+detectada menos 0,30 × altura da face (folga para o volume do cabelo). No IMG_1171 isso dá 0,204,
+então a inserção vai de 3,5% a 19,2%.
 
 Cantos levemente arredondados (`rounded_rect`, raio ~3%) integram melhor que canto reto.
 

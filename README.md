@@ -23,6 +23,7 @@ A skill fica disponível como `/editclean` no Claude Code.
 | ffmpeg + ffprobe | `brew install ffmpeg` | tudo |
 | faster-whisper | `pip3 install --user faster-whisper` | legendas com timestamp por palavra |
 | Pillow | `pip3 install --user Pillow` | medir largura de linha das legendas |
+| opencv-python-headless | `pip3 install --user opencv-python-headless` | localizar o rosto (altura da legenda) |
 | scipy *(opcional)* | `pip3 install --user scipy` | só para reanalisar o vídeo de referência |
 
 ### Credenciais
@@ -71,6 +72,7 @@ Flags: `--output`, `--aspect keep|9:16|1:1|16:9`, `--captions auto|off`,
 
 ```
 analyze_video.py    → manifest.json (silêncios, speech_spans, cenas, frames)
+detect_subject.py   → subject.json  (rosto: queixo, topo da cabeça, centro)
 transcribe.py       → words.json    (faster-whisper, timestamp por palavra)
 build_plan.py       → edit-plan.json (cortes, zooms, legendas, timeline)
 render_edit.py      → saída.partial.mp4
@@ -91,6 +93,7 @@ references/
   edit-plan.schema.json       schema do plano de edição
 scripts/
   analyze_video.py            análise de sinal do vídeo
+  detect_subject.py           acha o rosto (YuNet) e deriva as alturas seguras
   transcribe.py               transcrição com timestamp por palavra
   build_plan.py               monta o plano inteiro automaticamente
   render_edit.py              renderiza (ffmpeg)
@@ -98,6 +101,7 @@ scripts/
   fetch_images_apify.py       busca imagens (Google Images via Apify)
   fetch_images.py             busca imagens (Creative Commons)
 assets/fonts/                 Playfair Display (OFL)
+assets/models/                YuNet, detector de rosto (MIT, 232 KB)
 _backup_v1/                   estado anterior à v2, só para referência
 ```
 

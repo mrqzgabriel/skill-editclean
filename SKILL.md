@@ -58,7 +58,10 @@ Para legendas é necessário `faster-whisper`:
 
 ```bash
 python3 -c "import faster_whisper" || pip3 install --user faster-whisper
+python3 -c "import cv2"            || pip3 install --user opencv-python-headless
 ```
+
+O OpenCV é usado para localizar o rosto (§3) e definir a altura da legenda.
 
 Se faltar algo essencial: diga **exatamente** o que falta, dê o comando de instalação para macOS
 (`brew install ffmpeg`), **peça autorização antes de qualquer instalação global** e só prossiga
@@ -78,11 +81,27 @@ python3 "$SKILL/scripts/analyze_video.py" "<input>" --outdir "$WORK"
 Produz `$WORK/manifest.json` (metadados, cenas, silêncios, `speech_spans`, transientes, movimento,
 nitidez, frames pretos, congelamentos, heurística de legenda queimada) e frames em `$WORK/frames/`.
 
-**Inspecione visualmente os frames.** Deles saem três decisões que o script não toma:
+### Onde está o sujeito
 
-- onde o **sujeito** está no quadro (para a âncora do punch-in);
-- **onde começa a cabeça** — define a faixa livre para as inserções (§5);
-- se já existe **legenda queimada** (confirme, não confie só na heurística).
+```bash
+python3 "$SKILL/scripts/detect_subject.py" --video "<input>" --outdir "$WORK"
+```
+
+Roda em ~5 s (YuNet) e grava `subject.json` com **onde o rosto está neste vídeo**: queixo, topo da
+cabeça, altura e centro da face. Dele saem, automaticamente:
+
+| Derivado | Serve para |
+|---|---|
+| `caption_anchor_pct` | altura da legenda — abaixo do queixo |
+| `overlay_bottom_limit_pct` | até onde uma inserção no topo pode descer |
+| `face_center_y_pct` | âncora do punch-in |
+
+O `build_plan.py` chama isso sozinho se o arquivo não existir. **Não escolha essas alturas na mão** —
+elas dependem do enquadramento e um valor de outro vídeo erra. Sem rosto detectado (voz sobre
+imagem, animação, pessoa de costas) ele cai nos valores do perfil e avisa.
+
+**Inspecione visualmente os frames** assim mesmo, para confirmar se já existe **legenda queimada**
+(a heurística do manifesto é indício, não prova).
 
 ## 4. Transcrever (se `--captions auto`)
 
@@ -128,7 +147,8 @@ Regras:
 2. **Recorte marcas de terceiros** — e principalmente de **concorrentes do usuário** (seria péssimo
    mostrar concorrente no VSL dele). Recortar a região útil quase sempre resolve.
 3. Posicione conforme `graphics_overlays.safe_margins`: faixa no topo, 3,5% de respiro da borda,
-   largura ≤ 86%, **base acima de onde começa a cabeça** (medir nos frames — no IMG_1171 era 23,7%).
+   largura ≤ 86%. A **base fica acima da cabeça** — o limite vem do `subject.json`, não de medição
+   manual.
 4. Se nada pertinente aparecer, **omita a inserção** e registre em `limitations`. Nunca use asset
    genérico de preenchimento.
 5. **Avise o usuário no resumo final** que essas imagens têm direitos autorais e que o ideal é

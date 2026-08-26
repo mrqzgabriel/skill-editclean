@@ -1,6 +1,6 @@
 {
  "profile_name": "EditClean",
- "profile_version": "2.1.2",
+ "profile_version": "2.2.0",
  "derived_from": "ANALISE_TECNICA_EDICAO_VIDEO_REFERENCIA.md + medicao direta de 294 frames de 'Edit Pro/Video referencia.mp4' + preferencias do usuario (ver user_overrides)",
  "reference_material": {
   "duration_s": 152.2,
@@ -373,6 +373,19 @@
    ],
    "note": "Nao e letterbox do video; e composicao. Nao remover ao reenquadrar.",
    "confidence": 80
+  },
+  "subject_detection": {
+   "script": "scripts/detect_subject.py",
+   "detector": "yunet_2023mar (opencv_zoo, MIT)",
+   "model": "assets/models/face_detection_yunet_2023mar.onnx",
+   "samples_default": 40,
+   "outputs": [
+    "caption_anchor_pct",
+    "head_top_pct",
+    "overlay_bottom_limit_pct",
+    "face_center_y_pct"
+   ],
+   "note": "Roda em ~5 s. O build_plan.py chama sozinho se subject.json nao existir. Substitui as alturas que antes eram medidas a mao e so valiam para um enquadramento. Sem rosto detectado, cai nos valores fixos do perfil e AVISA."
   }
  },
  "captions": {
@@ -562,9 +575,9 @@
    "alignment_policy": "always_center",
    "alignment_note": "A referencia mistura centro (45%) e esquerda (25%), mas o usuario pediu explicitamente TUDO centralizado. Preferencia do usuario prevalece: nao usar alinhamento a esquerda.",
    "side_margin_pct": 0.09,
-   "anchor_policy": "single_fixed",
+   "anchor_policy": "derive_from_subject",
    "anchor_fixed_top_pct": 0.62,
-   "anchor_note": "A referencia alterna 3 faixas (~52% inferior, ~40% rodape, ~9% superior), mas o usuario reclamou que a legenda 'do nada vai pra outra posicao e fica indo pros cantos'. PADRAO: posicao vertical UNICA, todos os blocos, sempre centralizado. Valor 0.62 (26/08): em 0.55 a legenda encostava no queixo quando a pessoa inclina a cabeca - MEDIDO em 11 frames, o queixo desce ate ~0.53. Ao adaptar para outro video, medir onde o queixo desce mais e deixar ~0.08-0.10 de folga; conferir que a base do bloco de 2 linhas nao passa de 0.80.",
+   "anchor_note": "A referencia alterna 3 faixas, mas o usuario reclamou que a legenda 'do nada vai pra outra posicao'. PADRAO: posicao vertical UNICA, sempre centralizada.\nA ALTURA NAO E FIXA: scripts/detect_subject.py mede o rosto no proprio video (YuNet) e deriva\n  ancora = chin_p98 + max(0.035, 0.20 x altura_da_face), presa em [0.42, 0.72].\nO valor 0.62 abaixo e so o FALLBACK para quando nenhum rosto e detectado (voz sobre imagem, animacao, pessoa de costas). No IMG_1171 a deteccao devolve 0.605 - antes esse numero era medido a mao e so valia para aquele enquadramento.",
    "word_space_scale": 0.55,
    "word_space_scale_note": "MEDIDO: gap entre palavras na referencia = 0.25-0.35 x-height (10-14px com x-height 40); com espaco cheio da Helvetica ficava 0.65. Encolher o espaco para 55% via \\\\fscx no proprio caractere de espaco."
   },
@@ -663,7 +676,7 @@
    "top_pct": 0.035,
    "max_width_pct": 0.86,
    "bottom_limit_pct": 0.205,
-   "note": "Nunca colar a imagem nas bordas. A faixa util e acima da cabeca do sujeito: MEDIR onde comeca o cabelo (em IMG_1171: 23.7% da altura) e manter a base da imagem acima disso."
+   "note": "Nunca colar a imagem nas bordas. A faixa util fica ACIMA DA CABECA e e MEDIDA por scripts/detect_subject.py: head_top = testa_p02 - 0.30 x altura_da_face, e a insercao pode descer ate head_top - 0.012. O 0.205 abaixo e o fallback quando nao ha rosto detectado."
   },
   "placement_default": "top_band",
   "caption_collision_rule": "Legenda nunca na faixa ocupada por uma insercao no mesmo instante. Verificar sobreposicao temporal e mover a legenda."
