@@ -626,16 +626,22 @@ Escolha da palavra (editorial): a mesma voz **já pronunciou bem** no mesmo víd
 sem respelling fonético; contar ao usuário. Balbucio não se resolve regenerando com o mesmo texto —
 vai para o trim (§16) ou para uma frase mais longa, se o usuário aprovar o texto.
 
-## 19. Capa do vídeo — igual ao influencIA **[v2.10, pedido do Gabriel 01/09]**
+## 19. Capa do vídeo **[v2.11, pedido do Gabriel 01/09]**
 
-`scripts/make_cover.py` + `scripts/cover_gemini.cjs` copiam o `generateThumbnail` do sistema:
-`gemini-3-pro-image` no Vertex AI (location `global`), `generateContent` com [foto de referência
-do influencer, (logo oficial), prompt], `responseModalities IMAGE+TEXT`, e `fitToVertical`
-(contain em 1080×1920 sobre RGB 18,18,24). O prompt é o do sistema — pessoa em primeiro plano do
-peito para cima, fundo cinematográfico escuro ligado ao assunto, texto grande em vermelho
-`#E53935` / amarelo `#FFD600` / branco na metade de baixo, sem nome, sem @, sem texto na cena —
-com dois acréscimos: `--headline` (frase exata do texto grande) e `--logo` (logotipo oficial do
-`brand-logos.json`, enviado sobre fundo escuro como segunda imagem, com ordem de reproduzir sem
-redesenhar). A credencial de serviço é lida de `gcp_credentials` do próprio sistema, em memória.
-Medido no Fable 5.1: 34 s, imagem 1072×1920 do modelo → 1080×1920. Salvar a capa ao lado do vídeo
-(Desktop) e conferir texto/acentos antes de entregar.
+Primeira versão (v2.10) copiava o thumbnail do influencIA (texto vermelho/amarelo gerado pelo
+modelo, pessoa "intensa") — ficou como `--style influencia`. O Gabriel pediu outra coisa:
+*"mais cinematográfico, com a mesma fonte de legenda do vídeo, estilo cinema mesmo, e não quero
+cara de bravo"*. Daí o `--style cinema` (padrão):
+
+| Etapa | Como |
+|---|---|
+| imagem | `gemini-3-pro-image` no Vertex (`global`, credencial de `gcp_credentials` do sistema, `cover_gemini.cjs`) com [foto de referência, logo oficial, prompt]; prompt = frame de filme SEM texto: expressão calma/confiante (bravo proibido), lente anamórfica, key quente + rim frio, grão fino, grading contido, fundo do `--mood`, logo como fonte de luz reproduzido exatamente, terço inferior calmo |
+| ajuste | contain em 1080×1920 sobre (18,18,24), igual ao `fitToVertical` do sistema |
+| tipografia | composta em PIL com as fontes da legenda: Helvetica Neue Bold (índice 1 do TTC) + Playfair Display Italic 1,55× na ênfase (`*…*`), `#FCF8F6`, halo preto blur 0,22×corpo a 62%, glow branco no serifado (blur 0,06×corpo a 55%), degradê preto de 52% até 78% na base; auto-fit 70–150 px, ≤3 linhas, 86% da largura, fundo do bloco em 90,5% |
+
+Por que o texto não vem do modelo: ele não reproduz fonte específica (e a legenda do vídeo é a
+assinatura do estilo). Por que sem texto na geração: qualquer letra que o modelo invente briga com
+a tipografia real. Moods: `studio_haze` (névoa e feixes quentes), `void_light` (vazio com uma luz
+volumétrica), `server_room` (corredor de racks desfocado), `city_window` (bokeh de cidade
+chuvosa). Gerar 2–3 e julgar: rosto idêntico + calmo (eliminatório), logo uma vez e fiel, título
+legível.

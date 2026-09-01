@@ -1,6 +1,6 @@
 {
  "profile_name": "EditClean",
- "profile_version": "2.10.0",
+ "profile_version": "2.11.0",
  "derived_from": "ANALISE_TECNICA_EDICAO_VIDEO_REFERENCIA.md + medicao direta de 294 frames de 'Edit Pro/Video referencia.mp4' + preferencias do usuario (ver user_overrides)",
  "reference_material": {
   "duration_s": 152.2,
@@ -956,7 +956,9 @@
   "influencia_regenerate_on_mispronunciation": true,
   "influencia_regenerate_on_mispronunciation_note": "Pedido 01/09: 'quando identificar algum problema assim, entrar no sistema influencIA e regenerar, podendo ate mesmo mudar a copy pra pronuncia ficar certa'. Corrigir na origem, nunca so na legenda.",
   "cover_like_influencia": true,
-  "cover_like_influencia_note": "Pedido 01/09: 'gere uma capa para o video igual e gerado no sistema influencIA... com o logo do claude falando que a anthropic lancou o fable'. Salvar no Desktop junto do video."
+  "cover_like_influencia_note": "Pedido 01/09: 'gere uma capa para o video igual e gerado no sistema influencIA... com o logo do claude falando que a anthropic lancou o fable'. Salvar no Desktop junto do video.",
+  "cover_cinema_calm": true,
+  "cover_cinema_calm_note": "Pedido 01/09: capa 'mais cinematografica com a mesma fonte de legenda do video, estilo cinema mesmo, e nao quero cara de bravo na pessoa'. Tipografia composta com as fontes da legenda; imagem gerada sem texto; expressao calma."
  },
  "parts_concat": {
   "enabled_default": true,
@@ -1130,6 +1132,34 @@
    "gen_s": 34.4
   },
   "confidence": 88,
-  "origin": "copied_from_system"
+  "origin": "copied_from_system",
+  "style_default": "cinema",
+  "styles": [
+   "cinema",
+   "influencia"
+  ],
+  "cinema": {
+   "expression": "calma, confiante; bravo/cenho franzido proibidos",
+   "camera": "anamorfica, pouca profundidade, flare discreto, grao fino",
+   "light": "key quente frente-esquerda + rim frio",
+   "grading": "realces quentes, sombras frias, baixa saturacao",
+   "moods": [
+    "studio_haze",
+    "void_light",
+    "server_room",
+    "city_window"
+   ],
+   "no_text_in_image": true,
+   "typography": {
+    "sans": "Helvetica Neue Bold (TTC index 1)",
+    "accent": "Playfair Display Italic",
+    "accent_ratio": 1.55,
+    "color": "#FCF8F6",
+    "halo": "preto blur 0.22*corpo a 62%",
+    "accent_glow": "branco blur 0.06*corpo a 55%",
+    "bottom_gradient": "0.52H -> base, ate 78% preto",
+    "fit": "70-150 px, <=3 linhas, 86% largura, fundo do bloco em 0.905H"
+   }
+  }
  }
 }

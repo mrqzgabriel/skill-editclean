@@ -427,31 +427,41 @@ referência termina seco; **não "corrija" de volta**. O `build_plan` já estend
 última palavra para o fade não comer a frase; confira no relatório a duração de saída e, em vídeo
 em trechos, o `--last-tail-extra` do §1b.
 
-## 7d. Capa (thumbnail) do vídeo — v2.10
+## 7d. Capa (thumbnail) do vídeo — v2.11
 
-Depois do vídeo aprovado, gere a **capa** igual ao influencIA faz (pedido do Gabriel 01/09: "gere
-uma capa igual é gerado no sistema… com o logo do Claude falando que a Anthropic lançou o Fable"):
+Depois do vídeo aprovado, gere a **capa** — padrão `--style cinema` (pedido do Gabriel 01/09: *"algo
+mais cinematográfico com a mesma fonte de legenda do vídeo, estilo cinema mesmo, e não quero cara
+de bravo na pessoa"*):
 
 ```bash
 python3 "$SKILL/scripts/make_cover.py" --project "<título>" \
-  --headline "ANTHROPIC LANÇOU O FABLE 5.1" --logo claude \
-  --out "<pasta>/<nome>_CAPA.png"
+  --headline "ANTHROPIC LANÇOU O *Fable 5.1*" --logo claude --mood studio_haze \
+  --keep-raw "$WORK/capa_sem_texto.png" --out "<pasta>/<nome>_CAPA.png"
 ```
 
-- É o **mesmo método** do `generateThumbnail` do sistema: `gemini-3-pro-image` no Vertex
-  (location `global`), foto de referência do influencer (baixada do projeto pela API), prompt de
-  thumbnail (pessoa do peito para cima em primeiro plano, fundo cinematográfico escuro ligado ao
-  assunto, texto GRANDE em vermelho/amarelo/branco na metade de baixo, 9:16, sem nome, sem @),
-  e o ajuste final para 1080×1920 sobre (18,18,24). Credencial de serviço vem da tabela
-  `gcp_credentials` do próprio sistema (`cover_gemini.cjs`, usa as libs do repositório).
-- Por cima disso: `--headline` fixa a frase do texto grande (senão o modelo tira do título) e
-  `--logo <marca>` manda o logotipo **oficial** do registro (`brand-logos.json`) como segunda
-  imagem, com ordem de reproduzir exatamente. Sem `--logo` = igual ao sistema.
-- Sem projeto no influencIA: `--ref <foto> --title "..."`.
-- Grava um `.capa.json` ao lado com prompt, modelo e entradas (procedência). Olhe a capa antes de
-  entregar: o modelo às vezes erra acento ou inventa segunda frase — regenerar é barato (~35 s).
-- Versão do produto vem do vídeo/cópia, não do pedido ("Fable 4.1 sei lá" → 5.1, que é o que o
-  vídeo diz).
+Como o `cinema` funciona (spec §19):
+
+1. **Imagem sem texto** pelo `gemini-3-pro-image` (mesma credencial e rota do thumbnail do
+   influencIA, foto de referência do influencer baixada do projeto): frame de filme, pessoa do
+   peito para cima **calma e confiante** (o prompt proíbe cara de bravo, cenho franzido, boca
+   tensa), câmera de cinema anamórfica (pouca profundidade, flare discreto, grão fino), key
+   quente + rim frio, grading contido, fundo escuro do `--mood` (`studio_haze`, `void_light`,
+   `server_room`, `city_window` ou texto livre), **logo oficial** como emblema aceso na cena,
+   terço inferior calmo para o título. **Nenhum texto** na imagem.
+2. **Tipografia da legenda** composta pelo script com as fontes reais: Helvetica Neue Bold nas
+   palavras corridas, Playfair Display Italic **1,55×** na ênfase (marque com `*asteriscos*` no
+   `--headline`), cor `#FCF8F6`, halo escuro difuso, glow claro no serifado e degradê escuro no
+   rodapé. Auto-fit até 3 linhas em 86% da largura, bloco ancorado em 90,5% da altura.
+   `--text-only --ref <imagem>` recompõe só o texto (iterar sem gastar crédito).
+
+Gere **mais de uma variante** (moods diferentes) e escolha olhando: rosto idêntico à referência e
+sem cara de bravo são eliminatórios; logo reproduzido uma vez, sem redesenho; título legível e
+bonito. `--style influencia` mantém o thumbnail do sistema como ele é (texto vermelho/amarelo
+gerado pelo modelo, pessoa "intensa") para quando pedirem esse padrão.
+
+Sem projeto no influencIA: `--ref <foto> --title "..."`. Cada saída grava um `.capa.json` ao
+lado (prompt, modelo, mood, tipografia). Salve a capa junto do vídeo (Desktop). Versão do produto
+vem do vídeo, não do pedido ("Fable 4.1 sei lá" → 5.1).
 
 ## 8. Validar a saída
 
