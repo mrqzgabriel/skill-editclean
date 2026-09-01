@@ -8,7 +8,30 @@ description: Edita um vídeo aplicando o estilo do "Video referencia" — jump c
 Edita um vídeo aplicando o estilo definido em `references/style-profile.json` (v2) e
 `references/style-spec.md`.
 
-**O objetivo é entregar o MP4 editado.** Não pare depois de gerar o plano.
+**O objetivo é entregar a pasta completa no Desktop: vídeo + capa + legenda.** Não pare depois
+de gerar o plano, nem depois do MP4.
+
+## Entrega padrão — aprovada pelo Gabriel em 01/09/2026 ("ficou perfeito")
+
+Foi assim que o vídeo do Fable 5.1 (10 partes do influencIA) saiu, e é o padrão daqui em diante:
+
+| # | Etapa | Script | Seção |
+|---|---|---|---|
+| 1 | vídeo em trechos: conferir pronúncia na origem e regenerar a parte se precisar | `influencia_fix_part.py check` / `fix` | §1c |
+| 2 | cortar o ar morto de cada parte e juntar (cauda extra na última para o fade) | `concat_parts.py --scale 1080:1920 --last-tail-extra 1.4` | §1b |
+| 3 | analisar, rosto, transcrever (small + conferir com medium), corrigir só grafia | `analyze_video.py`, `detect_subject.py`, `transcribe.py` | §3–4 |
+| 4 | imagens reais para as inserções (~4/min), curadas uma a uma | `fetch_images_apify.py` | §5 |
+| 5 | plano (cortes, zooms, legendas, push-down, fade de encerramento) | `build_plan.py --accent --overlays` | §6 |
+| 6 | render em alta (crf 14) → logo oficial flutuando nas menções de marca (crf 18) | `render_edit.py`, `brand_logos.py plan/render` | §7, §7b |
+| 7 | validar o arquivo composto e promover | `validate_output.py`, `mv` | §8–9 |
+| 8 | capa cinema (sem cara de bravo, tipografia da legenda, título na zona segura do Reels, ênfase na cor do logo) — gerar 2–3 moods e escolher | `make_cover.py --style cinema --logo <marca>` | §7d |
+| 9 | legenda do post (sem travessão) | `make_caption.py` | §7e |
+| 10 | pasta no Desktop com tudo + `projeto/` | `deliver.py` | §9b |
+| 11 | relatório | — | §10 |
+
+Headline da capa no formato que ele aprovou: **frase curta em caixa-alta** + **produto em Playfair**
+(`"ANTHROPIC LANÇOU O *Fable 5.1*"`). Mood padrão `studio_haze`.
+
 
 ---
 
