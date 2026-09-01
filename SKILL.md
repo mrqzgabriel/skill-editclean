@@ -1,6 +1,6 @@
 ---
 name: editclean
-description: Edita um vídeo aplicando o estilo do "Video referencia" — jump cuts dentro do mesmo enquadramento, legendas palavra a palavra com duas famílias tipográficas, zooms sutis, inserções gráficas, grading quente discreto, logo oficial animado quando a fala cita uma empresa (Claude, OpenAI, Google…) e, quando o vídeo chega em trechos/partes (clipes do Veo/influencIA, zip com parteN.mp4), corte do ar morto de cada parte antes de juntar. Use quando pedirem para editar um vídeo nesse estilo ou "editar as partes/trechos".
+description: Edita um vídeo aplicando o estilo do "Video referencia" — jump cuts dentro do mesmo enquadramento, legendas palavra a palavra com duas famílias tipográficas, zooms sutis, inserções gráficas, grading quente discreto, logo oficial animado quando a fala cita uma empresa (Claude, OpenAI, Google…) e, quando o vídeo chega em trechos/partes (clipes do Veo/influencIA, zip com parteN.mp4), corte do ar morto de cada parte antes de juntar; se uma parte do influencIA saiu com palavra pronunciada errada ou balbucio, entra no sistema, troca a cópia e regenera a parte na origem. Use quando pedirem para editar um vídeo nesse estilo, "editar as partes/trechos" ou corrigir pronúncia de um vídeo do influencIA.
 ---
 
 # EditClean
