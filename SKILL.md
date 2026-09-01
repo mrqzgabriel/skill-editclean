@@ -473,6 +473,22 @@ Sem projeto no influencIA: `--ref <foto> --title "..."`. Cada saída grava um `.
 lado (prompt, modelo, mood, tipografia). Salve a capa junto do vídeo (Desktop). Versão do produto
 vem do vídeo, não do pedido ("Fable 4.1 sei lá" → 5.1).
 
+## 7e. Legenda do post (Reels) — v2.14
+
+Junto da capa, gere o **texto da legenda do Reels** (não confundir com a legenda queimada) do
+mesmo jeito que o influencIA (`lib/openai.ts generateCaption`): `gpt-5.5`, pt-BR, 100–200
+caracteres, CTA, até 5 hashtags, até 3–4 emojis, tom direto, sem repetir o título:
+
+```bash
+python3 "$SKILL/scripts/make_caption.py" --project "<título>" --out "$WORK/<nome>_LEGENDA.txt"
+# sem projeto no influencIA:
+python3 "$SKILL/scripts/make_caption.py" --title "..." --words "$WORK/words.json" --influencer "<nome>" --out ...
+```
+
+Regra da casa por cima do prompt do sistema: **nunca travessão (—) na copy** (preferência do
+Gabriel) — o prompt proíbe e o script troca por dois-pontos se escapar. Leia a legenda antes de
+entregar: gancho, CTA e hashtags têm que fazer sentido com o vídeo.
+
 ## 8. Validar a saída
 
 ```bash
@@ -498,6 +514,22 @@ mv "<destino>.partial.mp4" "<destino>"
 
 Guarde uma cópia do `edit-plan.json` fora do diretório temporário (permite reajustar sem refazer
 tudo) e só então remova os temporários **desta execução**.
+
+## 9b. Entregar SEMPRE numa pasta no Desktop — v2.14
+
+Pedido do Gabriel (01/09): *"entrega o vídeo + legenda + thumb dentro de uma pasta no desktop
+sempre"*. Depois de promover o vídeo, gerar a capa (§7d) e a legenda (§7e):
+
+```bash
+python3 "$SKILL/scripts/deliver.py" --name "<título do vídeo>" \
+  --video "<destino>.mp4" --cover "<capa>.png" --caption "<legenda>.txt" \
+  --extra "<capa_alternativa>.png" --extra "<capa_sem_texto>.png" --project-dir "$WORK"
+```
+
+Cria `~/Desktop/<Nome>/` com `<Nome>.mp4`, `<Nome>_CAPA.png`, `<Nome>_LEGENDA.txt`, os extras e
+`projeto/` (plano, transcrição, overrides, eventos de logo, `.capa.json`, `.legenda.json`). São
+**cópias** — os originais ficam onde estavam. Pasta existente vira `<Nome> (2)`, nunca é
+sobrescrita sem `--overwrite`. É essa pasta que você informa no relatório (§10).
 
 ## 10. Relatar
 

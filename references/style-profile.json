@@ -1,6 +1,6 @@
 {
  "profile_name": "EditClean",
- "profile_version": "2.13.0",
+ "profile_version": "2.14.0",
  "derived_from": "ANALISE_TECNICA_EDICAO_VIDEO_REFERENCIA.md + medicao direta de 294 frames de 'Edit Pro/Video referencia.mp4' + preferencias do usuario (ver user_overrides)",
  "reference_material": {
   "duration_s": 152.2,
@@ -962,7 +962,9 @@
   "cover_title_center_accent_logo_color": true,
   "cover_title_center_accent_logo_color_note": "Pedido 01/09 (depois de aprovar a capa cinema): 'texto mais bem posicionado, mais no centro, e o Fable 5.1 laranja na mesma cor do logo'.",
   "cover_title_inside_reels_safe_zone": true,
-  "cover_title_inside_reels_safe_zone_note": "Pedido 01/09: 'ta muito pra baixo; pesquise os ranges das coisas no Reels; o texto nunca deve ficar embaixo dessas coisas'. Titulo sempre acima de y=1500 (rodape + grade 1:1) e abaixo do queixo."
+  "cover_title_inside_reels_safe_zone_note": "Pedido 01/09: 'ta muito pra baixo; pesquise os ranges das coisas no Reels; o texto nunca deve ficar embaixo dessas coisas'. Titulo sempre acima de y=1500 (rodape + grade 1:1) e abaixo do queixo.",
+  "deliver_folder_on_desktop": true,
+  "deliver_folder_on_desktop_note": "Pedido 01/09: 'entrega o video + legenda + thumb dentro de uma pasta no desktop sempre'. E gerar a legenda do post em .txt (metodo do influencIA, sem travessao)."
  },
  "parts_concat": {
   "enabled_default": true,
@@ -1215,5 +1217,23 @@
    ],
    "researched_at": "2026-09-01"
   }
+ },
+ "caption_post": {
+  "script": "scripts/make_caption.py",
+  "model": "gpt-5.5",
+  "source_of_truth": "influencIA lib/openai.ts generateCaption",
+  "rules": "pt-BR, 100-200 chars, CTA, <=5 hashtags, <=3-4 emojis, nao repete o titulo, NUNCA travessao"
+ },
+ "delivery": {
+  "script": "scripts/deliver.py",
+  "folder": "~/Desktop/<Nome>/",
+  "files": [
+   "<Nome>.mp4",
+   "<Nome>_CAPA.png",
+   "<Nome>_LEGENDA.txt",
+   "extras",
+   "projeto/"
+  ],
+  "rule": "sempre; copias; nunca sobrescreve pasta existente"
  }
 }

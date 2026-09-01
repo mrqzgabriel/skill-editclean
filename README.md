@@ -87,7 +87,9 @@ render_edit.py      → render.partial.mp4
 brand_logos.py      → saída.partial.mp4 (logo oficial animado no peito quando a fala
                                          cita uma empresa; pula se não houver menção)
 validate_output.py  → aprova ou reprova
-make_cover.py       → <nome>_CAPA.png (capa cinematográfica com a tipografia da legenda; opcional)
+make_cover.py       → <nome>_CAPA.png (capa cinematográfica com a tipografia da legenda)
+make_caption.py     → <nome>_LEGENDA.txt (legenda do post)
+deliver.py          → ~/Desktop/<Nome>/ (vídeo + capa + legenda + projeto/) — entrega SEMPRE assim
 ```
 
 Só depois de aprovado o `.partial.mp4` vira o arquivo final.
@@ -116,6 +118,8 @@ scripts/
   influencia_fix_part.py      influencIA: acha pronúncia errada (whisper-1 vs cópia) e regenera a parte pela API
   make_cover.py               capa 1080x1920: estilo cinema (imagem sem texto + tipografia da legenda) ou o thumbnail do influencIA
   cover_gemini.cjs            helper Node do make_cover (gemini-3-pro-image via credencial do sistema)
+  make_caption.py             legenda do post para o Reels (gpt-5.5, prompt do influencIA, sem travessão)
+  deliver.py                  entrega: pasta no Desktop com vídeo + capa + legenda + projeto/
 references/brand-logos.json   registro de marcas: aliases, fonte OFICIAL do logo, cor
 assets/fonts/                 Playfair Display (OFL)
 assets/models/                YuNet, detector de rosto (MIT, 232 KB)
