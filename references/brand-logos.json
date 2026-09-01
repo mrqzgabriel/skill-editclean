@@ -1,0 +1,76 @@
+{
+  "_note": "Registro de marcas para a animacao de logo (v2.7). SO logotipo REAL, baixado da fonte oficial (site da empresa ou o SVG oficial hospedado na Wikimedia Commons). Nunca desenhar, nunca 'parecido'. O rasterizador guarda o PNG 2048px em assets/logos/<marca>.png com um .json de procedencia ao lado. Marca sem 'sources' = sem asset: o script avisa e PULA a animacao, nao inventa.",
+  "_alias_rule": "aliases sao comparados sem acento, sem pontuacao e em minusculas, sobre a transcricao (words.json). Alias com espaco casa uma sequencia de tokens.",
+  "_color_rule": "color e a cor-base do neon; o renderer deriva bloom/halo/nucleo/brilho dela. Branco (#FFFFFF) ganha bloom azulado frio.",
+  "brands": {
+    "claude": {
+      "name": "Claude (Anthropic)",
+      "aliases": ["claude", "cloud", "fable", "opus", "sonnet", "haiku"],
+      "sources": [{"url": "https://claude.ai/favicon.svg", "kind": "svg"}],
+      "color": "#D97757",
+      "palette": {"bloom": [255, 98, 38], "halo": [255, 146, 78], "core": [242, 163, 126], "hot": [255, 236, 214]},
+      "_palette_note": "valores aprovados no Fable 5.1 v1 (01/09); a derivacao automatica de #D97757 sai mais rosada"
+    },
+    "anthropic": {
+      "name": "Anthropic",
+      "aliases": ["anthropic", "antropic", "antrophic"],
+      "sources": [{"url": "https://upload.wikimedia.org/wikipedia/commons/7/78/Anthropic_logo.svg", "kind": "svg"}],
+      "color": "#D97757"
+    },
+    "openai": {
+      "name": "OpenAI / ChatGPT",
+      "aliases": ["openai", "open ai", "chatgpt", "chat gpt", "gpt"],
+      "sources": [{"url": "https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg", "kind": "svg", "remove_fill": ["#74aa9c"]}],
+      "color": "#FFFFFF"
+    },
+    "google": {
+      "name": "Google",
+      "aliases": ["google"],
+      "sources": [{"url": "https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg", "kind": "svg"}],
+      "color": "#4285F4"
+    },
+    "gemini": {
+      "name": "Gemini (Google)",
+      "aliases": ["gemini"],
+      "sources": [{"url": "https://www.gstatic.com/lamda/images/gemini_favicon_f069958c85030456e93de685481c559f160ea06b.png", "kind": "png"}],
+      "color": "#4E8CF6"
+    },
+    "meta": {
+      "name": "Meta",
+      "aliases": ["meta", "llama", "facebook"],
+      "sources": [{"url": "https://upload.wikimedia.org/wikipedia/commons/7/7b/Meta_Platforms_Inc._logo.svg", "kind": "svg"}],
+      "color": "#0081FB"
+    },
+    "microsoft": {
+      "name": "Microsoft",
+      "aliases": ["microsoft", "copilot"],
+      "sources": [{"url": "https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg", "kind": "svg", "remove_fill": ["#f3f3f3"]}],
+      "color": "#00A4EF"
+    },
+    "deepseek": {
+      "name": "DeepSeek",
+      "aliases": ["deepseek", "deep seek"],
+      "sources": [{"url": "https://cdn.deepseek.com/logo.png", "kind": "png"}],
+      "color": "#4D6BFE"
+    },
+    "mistral": {
+      "name": "Mistral AI",
+      "aliases": ["mistral"],
+      "sources": [{"url": "https://mistral.ai/favicon.ico", "kind": "ico"}],
+      "color": "#FF7000"
+    },
+    "perplexity": {
+      "name": "Perplexity",
+      "aliases": ["perplexity"],
+      "sources": [{"url": "https://www.perplexity.ai/favicon.svg", "kind": "svg", "alpha_from_luma": true}],
+      "color": "#20B8CD"
+    },
+    "xai": {
+      "name": "xAI / Grok",
+      "aliases": ["xai", "x ai", "grok"],
+      "sources": [],
+      "color": "#FFFFFF",
+      "_todo": "x.ai/favicon.svg deu 404 e a Wikimedia nao tem o SVG; sem asset oficial o script pula a animacao"
+    }
+  }
+}

@@ -508,3 +508,90 @@ Qualidade alta: CRF 18, preset `slow`. Rascunho: CRF 26, preset `veryfast`.
    transições o silêncio é mantido com o corte no meio dele.
 10. Nunca reintroduzir `fps` logo depois de `zoompan` (multiplica os frames) nem zoom sem
     superamostragem (treme).
+
+## 16. Vídeo em trechos — corte por parte **[v2.7, pedido do Gabriel 01/09]**
+
+Clipe gerado (Veo, influencIA) tem ~8 s fixos: a fala acaba e o vídeo continua 1–2 s parado. Dez
+partes concatenadas cruas = 15–20 s de ar morto e emendas moles. O pedido foi ficar **"cortadinho
+certinho, igual acontece quando é renderizado no influencIA"**, e `scripts/concat_parts.py` copia
+a regra do `normalizeTrimConcat` (`artifacts/api-server/src/lib/remotion-renderer.ts`):
+
+| Medição | faster-whisper por palavra + `silencedetect=noise=-25dB:d=0.15` |
+|---|---|
+| Começo | silêncio que começa em < 0,05 s e termina até 0,2 s após a 1ª palavra → fim do silêncio − 0,05; senão 1ª palavra − 0,08 |
+| Fim | última palavra + 0,15 s |
+| Sem fala | começo do silêncio final + 0,05; sem silêncio: duração − 0,5 |
+
+**Proteção que o influencIA não tem:** o Whisper costuma fechar a última palavra cedo. Se no ponto
+de corte a energia ainda não caiu (o instante não está dentro de um silêncio medido), o fim anda
+até o próximo silêncio + 0,05 (no máximo 0,6 s). Regra 5 (nunca cortar enquanto fala) vale aqui
+também. Cada parte é re-encodada (crf 12, fade de 12 ms nas bordas para não estalar) e o concat é
+sem re-encode.
+
+Medido no Fable 5.1 (10 partes, 80 s): ar morto removido por parte entre 0,35 s e 2,39 s; total
+80 → 60,2 s **antes** do `build_plan`, que depois só achou mais 1,0 s de pausa para tirar. As
+emendas entre partes ficam com ~0,2 s de respiro (0,15 do fim + 0,05 do começo) — o mesmo ritmo do
+influencIA.
+
+**Balbucio da voz gerada não é pego pela máquina.** A parte 9 tinha 6,4 s de fonemas sem sentido
+("Oristote Paracosfinete do Meto Borsenias…"): small, medium e large-v3 transcrevem como palavras,
+o `avg_logprob` não denuncia, e o rabo vaza para os 0,24 s iniciais da parte 10 (o que impede a
+regra do começo de disparar, porque ela exige silêncio desde 0,05 s). Só a leitura da transcrição
+impressa pega. Correção por `--overrides` em segundos locais da parte, igual ao
+`ClipTrimOverride`: `{"parte9.mp4": {"end": 1.58}, "parte10.mp4": {"start": 0.62}}`.
+
+## 17. Logo de marca em motion design **[v2.7, pedido do Gabriel 01/09, aprovado]**
+
+Pedido: *"quando fala no começo do Fable seria interessante aparecer o logo com efeito de entrada
+de baixo pra cima e depois saindo no estilo motion design… pra ficar cinematográfico e bonito"*,
+com uma referência do logo do Claude aceso em laranja no peito do moletom. Generalizado para
+qualquer empresa citada (*"quando falar de alguma empresa como openai, anthropic etc"*).
+
+### Asset
+Só logotipo **oficial**, de fonte registrada (`references/brand-logos.json`): favicon/SVG do site
+da empresa ou o SVG oficial hospedado na Wikimedia Commons. Rasterizado em 2048 px com canal alfa
+(`assets/logos/<marca>.png` + `.json` de procedência). O renderer usa **só o alfa** — a cor vem da
+paleta da marca, então wordmark preto (Anthropic) funciona igual. SVG com fundo chapado perde o
+fundo por `remove_fill` (ChatGPT `#74aa9c`, Microsoft `#f3f3f3`); ícone branco sobre fundo escuro
+usa `alpha_from_luma` (Perplexity). Marca sem fonte oficial (xAI) é **pulada**.
+
+### Paleta (derivada da cor-base)
+bloom = cor mais saturada, halo = cor clara, núcleo = cor dessaturada e clara, brilho = quase
+branco. Base com saturação < 0,12 (OpenAI branco) recebe neon frio azulado. Composição de trás
+para frente, alpha-over, com o fundo escuro isso lê como aditivo:
+
+| Camada | Blur (unidade = tamanho/340) | Alfa |
+|---|---|---|
+| bloom | σ 62 | 0,72 × pulso |
+| halo | σ 18 | 0,85 × pulso |
+| mark | — | 1,0 |
+| núcleo quente | máscara × densidade^1,35 (blur 0,155×tamanho, normalizado) | 0,80 × pulso |
+
+A "densidade" é o mark desfocado: alta no miolo, baixa nas pontas — é o que deixa o centro
+branco-quente e as pontas na cor, como um neon de verdade.
+
+### Movimento (valores aprovados)
+| Fase | Duração | O que acontece |
+|---|---|---|
+| entrada | 0,66 s | sobe 250 px (em 1920) com `ease_out_back` (overshoot 1,28), escala 0,80→1, alfa smoothstep em 0,30 s, brilho +55% decaindo |
+| sustentação | 1,00 s | parado, brilho respira +14% (seno) |
+| saída | 0,54 s | sobe 150 px com `ease_in_cubic`, escala →1,07, alfa cai por smoothstep a partir de 8% |
+
+Entra **0,32 s depois de a palavra acender** (a menção fica com o logo já no meio da subida).
+Espaço mínimo de **10 s** entre animações. Menção que cai em push-down, cartão central, desfoque
+ou trecho removido é pulada: o quadro está deslocado e o logo, em espaço de tela, flutuaria.
+
+### Posição (derivada do plano, não medida a olho)
+Faixa útil = do **fundo da legenda de 2 linhas no maior corpo** (+ halo 1,2%) até a **reserva de
+UI do Reels** (11,5%). Mark compacto (aspecto ≤ 1,6): largura 26,7% do canvas (288 px em 1080),
+topo encostado na faixa. Wordmark (aspecto > 1,6): largura até 60%, centrado na faixa. No Fable
+5.1: faixa 0,736–0,885, `cy` 0,811 — o primeiro teste a 0,781 com 330 px colidia com a segunda
+linha ("saiu") da legenda; a 0,812/288 px sobrou 65 px de folga. A saída para cima cruza a área
+da legenda, mas com `ease_in` o logo só anda de verdade quando já está quase apagado.
+
+### Composição
+Sequência RGBA de canvas inteiro **começando em t = 0** (frames vazios até o evento; PNG
+transparente comprime a ~4 KB) e `overlay=0:0:eof_action=pass:format=auto` sobre o render — uma
+entrada só, sem `itsoffset`, sem `-loop`. Segunda passagem de encode (render em crf 14 → final
+crf 18, áudio copiado). `-t` casa a duração com o vídeo: o AAC sai ~67 ms mais longo que os
+frames e o `validate_output` procura um frame em `duração − 0,10` que não existe.

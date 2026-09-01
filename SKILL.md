@@ -1,6 +1,6 @@
 ---
 name: editclean
-description: Edita um vídeo aplicando o estilo do "Video referencia" — jump cuts dentro do mesmo enquadramento, legendas palavra a palavra com duas famílias tipográficas, zooms sutis, inserções gráficas e grading quente discreto. Use quando pedirem para editar um vídeo nesse estilo.
+description: Edita um vídeo aplicando o estilo do "Video referencia" — jump cuts dentro do mesmo enquadramento, legendas palavra a palavra com duas famílias tipográficas, zooms sutis, inserções gráficas, grading quente discreto, logo oficial animado quando a fala cita uma empresa (Claude, OpenAI, Google…) e, quando o vídeo chega em trechos/partes (clipes do Veo/influencIA, zip com parteN.mp4), corte do ar morto de cada parte antes de juntar. Use quando pedirem para editar um vídeo nesse estilo ou "editar as partes/trechos".
 ---
 
 # EditClean
@@ -38,12 +38,55 @@ espaços** — preserve-os inteiros.
 | `--captions` | `auto` \| `off` | `auto` |
 | `--quality` | `draft` \| `high` | `high` |
 | `--images` | `auto` \| `off` | `auto` |
+| `--parts` | `auto` \| `off` | `auto` — vídeo que chega em trechos: corta o ar morto de cada parte antes (§1b) |
+| `--logos` | `auto` \| `off` | `auto` — animação de logo quando a fala cita uma empresa (§7b) |
 | `--overwrite` | (sem valor) | ausente |
 
 Nome padrão de saída: `<nome-original>_editclean.mp4`.
 
 Se a saída já existir e `--overwrite` **não** tiver sido passado, use `_editclean_v2.mp4`, depois
 `_v3`, `_v4`… **Nunca sobrescreva o vídeo original nem outro arquivo existente em silêncio.**
+
+## 1b. Vídeo em trechos (partes numeradas) — v2.7
+
+Quando a entrada é um **conjunto de partes** (`parte1.mp4 … parte10.mp4`, clipes de ~8 s do Veo /
+influencIA, um zip com elas), **não concatene cru**. Cada clipe gerado termina com ar morto (a fala
+acaba e o vídeo continua 1–2 s) e às vezes começa com folga; junto de 10 partes isso vira 15–20 s
+de silêncio que o `build_plan` só remove em parte e que deixa as emendas moles. O Gabriel pediu
+(01/09) que fique **"cortadinho certinho, igual quando renderiza no influencIA"**.
+
+```bash
+python3 "$SKILL/scripts/concat_parts.py" --dir "<pasta>" --pattern "parte*.mp4" \
+  --out "$WORK/master.mp4" --scale 1080:1920 --report "$WORK/partes_report.json" \
+  [--overrides "$WORK/partes_overrides.json"]
+```
+
+É a **mesma regra** do `normalizeTrimConcat` do influencIA
+(`artifacts/api-server/src/lib/remotion-renderer.ts`), por parte:
+
+| Passo | Regra |
+|---|---|
+| medir | faster-whisper (palavras) + `silencedetect` −25 dB / 0,15 s |
+| começo | silêncio que começa em < 0,05 s e termina até 0,2 s após a 1ª palavra → **fim do silêncio − 0,05**; senão **1ª palavra − 0,08** |
+| fim | **última palavra + 0,15 s** — e, proteção nossa, se a energia ainda não caiu ali, anda até o próximo silêncio + 0,05 (máx. 0,6 s). Nunca decepa sílaba |
+| sem fala | começo do silêncio final + 0,05; sem silêncio: duração − 0,5 |
+| encode | cada parte re-encodada (crf 12, fade de 12 ms nas bordas contra clique) e concat sem re-encode |
+
+**Leia a transcrição que o script imprime de cada parte.** Voz gerada às vezes vira **balbucio**
+(no Fable 5.1 a parte 9 tinha 6,4 s de "Oristote Paracosfinete…" que os três modelos Whisper
+transcrevem como palavras) — o corte automático **não pega** isso, nem o `avg_logprob`. Quando
+achar, use `--overrides` com tempos **locais** da parte, igual ao `ClipTrimOverride` do influencIA:
+
+```json
+{"parte9.mp4": {"end": 1.58}, "parte10.mp4": {"start": 0.62}, "parte3.mp4": {"skip": true}}
+```
+
+O rabo do balbucio costuma vazar para o **começo da parte seguinte** (a regra do início exige
+silêncio desde 0,05 s, e o rabo impede) — confira as duas partes vizinhas, não só a defeituosa.
+
+Depois disso o master é a entrada normal da skill (§2 em diante). O `--scale` já sobe para
+1080×1920 no mesmo encode; entregue nessa resolução (nativa do Reels e os prints inseridos ficam
+legíveis). Registre no relatório final quanto cada parte perdeu e os overrides usados.
 
 ## 2. Validar entrada e dependências
 
@@ -279,6 +322,44 @@ python3 "$SKILL/scripts/render_edit.py" \
 
 Escreve em `<destino>.partial.mp4`. **Ainda não é o arquivo final.**
 
+## 7b. Logo de marca em motion design (se `--logos auto`) — v2.7
+
+Quando a fala **cita uma empresa/modelo** (Claude/Fable/Anthropic, OpenAI/ChatGPT, Google/Gemini,
+Meta, Microsoft, DeepSeek, Mistral, Perplexity…), o logotipo **oficial** aparece no peito da
+pessoa: **sobe de baixo** com ease-out e leve overshoot (0,66 s), acende com bloom + halo + núcleo
+quente na cor da marca, segura ~1 s com o brilho respirando e **sai para cima** acelerando
+enquanto apaga (0,54 s). Pedido do Gabriel 01/09 ("logo com efeito de entrada de baixo pra cima e
+depois saindo no estilo motion design… cinematográfico e bonito"), aprovado no Fable 5.1.
+
+```bash
+python3 "$SKILL/scripts/brand_logos.py" plan   --work "$WORK" --plan "$WORK/edit-plan.json"
+python3 "$SKILL/scripts/brand_logos.py" render --events "$WORK/brand-logos.json" \
+  --in "<render>.partial.mp4" --out "<destino>.partial.mp4"
+```
+
+Como funciona (detalhes em `style-spec.md` §17):
+
+- **Registro** em `references/brand-logos.json`: aliases por marca, **fonte oficial** do logotipo
+  (site da empresa ou o SVG oficial na Wikimedia Commons) e cor-base. O `fetch` baixa, rasteriza
+  em 2048 px (Chrome headless no Mac) e guarda em `assets/logos/<marca>.png` com um `.json` de
+  procedência. **Marca sem fonte oficial (xAI hoje) é pulada, nunca desenhada** — regra 6.
+- O `plan` acha as menções no `words.json`, mapeia para a timeline de saída pelos segmentos do
+  plano, entra **0,32 s depois de a palavra acender**, exige **≥ 10 s** entre animações e **pula**
+  menção que caia em push-down, cartão central, desfoque ou trecho removido (o quadro está
+  deslocado/desfocado — o logo flutuaria). Grava `brand-logos.json`; copie-o para
+  `edit-plan.json` em `brand_logos` (procedência).
+- **Posição é derivada, não chutada**: o topo da faixa é o fundo da legenda de 2 linhas no maior
+  corpo do plano (+ halo), o fundo é a reserva de UI do Reels (11,5%). Mark quadrado: 26,7% da
+  largura (288 px em 1080), encostado no topo da faixa. Wordmark largo: até 60% da largura,
+  centrado na faixa. No Fable 5.1 isso deu `cy 0,811`, sem tocar a linha "saiu" da legenda.
+- **Render em duas passagens**: o `render_edit.py` sai em crf 14 para um intermediário, e o
+  `brand_logos.py render` compõe a sequência RGBA (transparente fora dos eventos, começa em t=0,
+  `overlay … eof_action=pass`) e grava o `.partial.mp4` final em crf 18 copiando o áudio, com `-t`
+  igual à duração do vídeo — o AAC do render sai ~67 ms mais longo e isso derruba a checagem
+  `frames_inspecao` do validador.
+
+O `validate_output.py` roda **no arquivo composto**, não no intermediário.
+
 ## 8. Validar a saída
 
 ```bash
@@ -307,9 +388,10 @@ tudo) e só então remova os temporários **desta execução**.
 
 ## 10. Relatar
 
-Informe: caminho do vídeo final; duração antes → depois e quanto foi removido; nº de cortes,
-transições, zooms e blocos de legenda; imagens inseridas **com a origem e o aviso de direitos**;
-resultado da validação; limitações reais.
+Informe: caminho do vídeo final; duração antes → depois e quanto foi removido (se veio em
+trechos, quanto cada parte perdeu e os overrides); nº de cortes, transições, zooms e blocos de
+legenda; imagens inseridas **com a origem e o aviso de direitos**; logos animados (marca, instante,
+fonte oficial); resultado da validação; limitações reais.
 
 ---
 
@@ -328,6 +410,10 @@ resultado da validação; limitações reais.
 9. Credencial só de `OPENAI_API_KEY`/`APIFY_TOKEN` no ambiente ou de `$SKILL/.credentials.json`.
    Nunca vasculhar outros projetos, nunca imprimir a chave.
 10. Nunca declarar sucesso sem `validate_output.py` aprovar.
+11. Logo de marca só de **fonte oficial** registrada em `brand-logos.json`; sem asset, sem
+    animação. Nunca redesenhar, nunca "parecido".
+12. Vídeo em trechos: **ler a transcrição de cada parte** antes de aceitar o corte automático —
+    balbucio de voz gerada passa pelo Whisper como se fosse fala.
 
 ## Notas de implementação (armadilhas já resolvidas)
 

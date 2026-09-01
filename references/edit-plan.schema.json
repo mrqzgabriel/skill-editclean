@@ -1204,6 +1204,11 @@
     }
    }
   },
+  "brand_logos": {
+   "type": "array",
+   "description": "v2.7: animacoes de logo de marca (scripts/brand_logos.py) compostas DEPOIS do render, em espaco de tela. Cada item e um evento {id, brand, mention, t_in, t_settle, t_out, t_end, asset, cy, width_px}; copia do brand-logos.json do WORK, guardada aqui so como procedencia.",
+   "items": {"type": "object"}
+  },
   "push_down": {
    "type": "object",
    "description": "Efeito push-down: o video (com legendas ja queimadas) desliza para baixo e abre palco no topo para a insercao aparecer maior. Aplicado DEPOIS das legendas no render, para elas descerem junto.",

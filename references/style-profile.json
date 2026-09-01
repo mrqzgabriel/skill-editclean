@@ -1,6 +1,6 @@
 {
  "profile_name": "EditClean",
- "profile_version": "2.6.0",
+ "profile_version": "2.7.0",
  "derived_from": "ANALISE_TECNICA_EDICAO_VIDEO_REFERENCIA.md + medicao direta de 294 frames de 'Edit Pro/Video referencia.mp4' + preferencias do usuario (ver user_overrides)",
  "reference_material": {
   "duration_s": 152.2,
@@ -941,6 +941,119 @@
   "insertion_per_window_headroom": true,
   "insertion_per_window_headroom_note": "Pedido 26/08 ('as imagens tem que ser em tamanho maior'): caixa dimensionada pela folga REAL medida no trecho de cada insercao, nao pelo pior caso global. 16:9 entra inteira onde ha folga.",
   "vertical_image_center_card": true,
-  "vertical_image_center_card_note": "Pedido 26/08 ('quero que apareca no centro da tela com o video desfocado' + 'mais pra baixo junto a legenda e a imagem em um componente e centralize'): imagem vertical vira cartao central com desfoque de fundo e legenda colada abaixo, componente centrado. Aprovado: 'ficou perfeito'."
+  "vertical_image_center_card_note": "Pedido 26/08 ('quero que apareca no centro da tela com o video desfocado' + 'mais pra baixo junto a legenda e a imagem em um componente e centralize'): imagem vertical vira cartao central com desfoque de fundo e legenda colada abaixo, componente centrado. Aprovado: 'ficou perfeito'.",
+  "parts_tight_cut": true,
+  "parts_tight_cut_note": "Pedido 01/09 (Fable 5.1, 10 partes do Veo): 'cortar o final de cada trecho pra ficar cortadinho certinho igual quando renderiza no influencIA'. Regra copiada do normalizeTrimConcat; overrides por parte para balbucio da voz gerada.",
+  "brand_logo_animation": true,
+  "brand_logo_animation_note": "Pedido 01/09: 'quando fala no comeco do Fable aparecer o logo com efeito de entrada de baixo pra cima e depois saindo no estilo motion design, cinematografico'; depois 'quando falar de alguma empresa como openai, anthropic etc fazer animacao com o logo igual fizemos'. Logo OFICIAL no peito, neon na cor da marca, sobe/segura/sai. Aprovado no Fable 5.1 v1."
+ },
+ "parts_concat": {
+  "enabled_default": true,
+  "script": "scripts/concat_parts.py",
+  "rule_source": "influencIA artifacts/api-server/src/lib/remotion-renderer.ts normalizeTrimConcat (copiado 01/09/2026)",
+  "silence_noise_db": -25,
+  "silence_min_s": 0.15,
+  "start_lead_silence_pad_s": 0.05,
+  "start_no_silence_pad_s": 0.08,
+  "end_after_last_word_s": 0.15,
+  "end_extend_to_silence_max_s": 0.6,
+  "no_speech_trailing_pad_s": 0.05,
+  "no_speech_fallback_s": 0.5,
+  "segment_encode": {
+   "crf": 12,
+   "preset": "slow",
+   "edge_fade_ms": 12
+  },
+  "overrides": "JSON por arquivo {start,end,skip} em segundos locais da parte (= ClipTrimOverride)",
+  "measured_fable51": {
+   "parts": 10,
+   "duration_in_s": 80.0,
+   "duration_out_s": 60.23,
+   "removed_per_part_s": [
+    2.07,
+    1.25,
+    1.13,
+    1.81,
+    0.39,
+    1.77,
+    0.35,
+    1.47,
+    6.42,
+    2.39
+   ]
+  },
+  "confidence": 90,
+  "origin": "measured"
+ },
+ "brand_logo": {
+  "enabled_default": true,
+  "script": "scripts/brand_logos.py",
+  "registry": "references/brand-logos.json",
+  "assets_dir": "assets/logos",
+  "lead_after_word_s": 0.32,
+  "rise_s": 0.66,
+  "hold_s": 1.0,
+  "exit_s": 0.54,
+  "rise_px_at_1920": 250,
+  "exit_px_at_1920": 150,
+  "size_w_frac_square": 0.267,
+  "size_w_frac_wide_max": 0.6,
+  "wide_aspect_threshold": 1.6,
+  "band_top": "fundo da legenda de 2 linhas no maior corpo + halo 0.012",
+  "band_bottom_pct": 0.885,
+  "min_gap_s": 10.0,
+  "skip_when": [
+   "push_down",
+   "center_card",
+   "blur",
+   "opening",
+   "trecho removido"
+  ],
+  "easing": {
+   "rise": "ease_out_back(1.28)",
+   "exit": "ease_in_cubic",
+   "alpha": "smoothstep"
+  },
+  "glow": {
+   "bloom_sigma_unit": 62,
+   "halo_sigma_unit": 18,
+   "bloom_alpha": 0.72,
+   "halo_alpha": 0.85,
+   "hot_alpha": 0.8,
+   "hot_density_gamma": 1.35,
+   "breath_pct": 0.14
+  },
+  "compose": {
+   "render_crf": 14,
+   "final_crf": 18,
+   "audio": "copy",
+   "duration": "frames do video (-t)"
+  },
+  "measured_fable51": {
+   "events": [
+    {
+     "brand": "claude",
+     "out": [
+      0.5,
+      2.7
+     ],
+     "cy": 0.811,
+     "width_px": 288
+    },
+    {
+     "brand": "claude",
+     "out": [
+      48.64,
+      50.84
+     ]
+    }
+   ],
+   "band": [
+    0.736,
+    0.885
+   ]
+  },
+  "confidence": 88,
+  "origin": "inferred+approved"
  }
 }

@@ -71,11 +71,15 @@ Flags: `--output`, `--aspect keep|9:16|1:1|16:9`, `--captions auto|off`,
 ### Pipeline
 
 ```
+concat_parts.py     → master.mp4    (só quando o vídeo chega em trechos: corta o ar morto
+                                     de cada parte, regra do influencIA, e junta)
 analyze_video.py    → manifest.json (silêncios, speech_spans, cenas, frames)
 detect_subject.py   → subject.json  (rosto: queixo, topo da cabeça, centro)
 transcribe.py       → words.json    (faster-whisper, timestamp por palavra)
 build_plan.py       → edit-plan.json (cortes, zooms, legendas, timeline)
-render_edit.py      → saída.partial.mp4
+render_edit.py      → render.partial.mp4
+brand_logos.py      → saída.partial.mp4 (logo oficial animado no peito quando a fala
+                                         cita uma empresa; pula se não houver menção)
 validate_output.py  → aprova ou reprova
 ```
 
@@ -100,8 +104,12 @@ scripts/
   validate_output.py          19 checagens no arquivo final
   fetch_images_apify.py       busca imagens (Google Images via Apify)
   fetch_images.py             busca imagens (Creative Commons)
+  concat_parts.py             vídeo em trechos: corta o fim/começo morto de cada parte e junta
+  brand_logos.py              logo de marca animado (plan / render / fetch)
+references/brand-logos.json   registro de marcas: aliases, fonte OFICIAL do logo, cor
 assets/fonts/                 Playfair Display (OFL)
 assets/models/                YuNet, detector de rosto (MIT, 232 KB)
+assets/logos/                 logotipos oficiais rasterizados (baixados sob demanda, com .json de origem)
 _backup_v1/                   estado anterior à v2, só para referência
 ```
 
@@ -118,7 +126,9 @@ _backup_v1/                   estado anterior à v2, só para referência
    **Prevalecem sobre o vídeo de referência** e não devem ser "corrigidas" de volta.
 
 Overrides atuais: legendas sempre centralizadas e em posição vertical única; nunca
-cortar enquanto a pessoa fala; efeitos mais suaves; imagens obrigatórias.
+cortar enquanto a pessoa fala; efeitos mais suaves; imagens obrigatórias e só reais;
+vídeo em trechos cortado por parte (regra do influencIA); logo oficial animado no peito
+quando a fala cita uma empresa.
 
 ---
 
