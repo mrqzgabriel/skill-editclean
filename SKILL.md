@@ -84,6 +84,10 @@ achar, use `--overrides` com tempos **locais** da parte, igual ao `ClipTrimOverr
 O rabo do balbucio costuma vazar para o **começo da parte seguinte** (a regra do início exige
 silêncio desde 0,05 s, e o rabo impede) — confira as duas partes vizinhas, não só a defeituosa.
 
+**Fade de encerramento (v2.8, padrão):** a última parte precisa sobrar depois da última palavra,
+senão o fade apaga a fala — passe `--last-tail-extra 1.4` (o `build_plan` estende a cauda em
+`audio_fade_s` sozinho, mas só se o master tiver esse material).
+
 Depois disso o master é a entrada normal da skill (§2 em diante). O `--scale` já sobe para
 1080×1920 no mesmo encode; entregue nessa resolução (nativa do Reels e os prints inseridos ficam
 legíveis). Registre no relatório final quanto cada parte perdeu e os overrides usados.
@@ -352,6 +356,10 @@ Como funciona (detalhes em `style-spec.md` §17):
   corpo do plano (+ halo), o fundo é a reserva de UI do Reels (11,5%). Mark quadrado: 26,7% da
   largura (288 px em 1080), encostado no topo da faixa. Wordmark largo: até 60% da largura,
   centrado na faixa. No Fable 5.1 isso deu `cy 0,811`, sem tocar a linha "saiu" da legenda.
+- **v2.8 (01/09)**: o logo **flutua** enquanto está na tela (seno de ±8,6 px em y e ±2 px em x
+  em 1080×1920, ganho suave durante a subida) e o glow ficou **15% mais fraco e ~20% mais
+  aberto** (bloom σ74/0,61, halo σ22/0,72, núcleo 0,68). Pedido: "como se tivesse flutuando, com
+  uma margem curta de movimento… o glow 15% mais fraco e um pouco maior o range".
 - **Render em duas passagens**: o `render_edit.py` sai em crf 14 para um intermediário, e o
   `brand_logos.py render` compõe a sequência RGBA (transparente fora dos eventos, começa em t=0,
   `overlay … eof_action=pass`) e grava o `.partial.mp4` final em crf 18 copiando o áudio, com `-t`
@@ -359,6 +367,14 @@ Como funciona (detalhes em `style-spec.md` §17):
   `frames_inspecao` do validador.
 
 O `validate_output.py` roda **no arquivo composto**, não no intermediário.
+
+## 7c. Encerramento — fade (v2.8, preferência do Gabriel)
+
+Desde a v2.8 o plano sai com `closing: fade_out` (vídeo escurece em 1,0 s, áudio apaga em 1,3 s)
+— pedido de 01/09: *"no final do vídeo coloque fade out no áudio e a tela ficando preta"*. A
+referência termina seco; **não "corrija" de volta**. O `build_plan` já estende a cauda depois da
+última palavra para o fade não comer a frase; confira no relatório a duração de saída e, em vídeo
+em trechos, o `--last-tail-extra` do §1b.
 
 ## 8. Validar a saída
 

@@ -61,6 +61,17 @@ UI_RESERVE_PCT = 0.115     # reserva de UI do Reels (mesma do push-down)
 CAPTION_HALO_PCT = 0.012   # halo difuso abaixo da ultima linha
 MIN_GAP_S = 10.0           # espaco minimo entre duas animacoes
 
+# --- flutuacao (v2.8, pedido 01/09: "como se tivesse flutuando, margem curta") -----
+FLOAT_Y_PCT = 0.0045       # amplitude vertical, fracao da altura (8,6 px em 1920)
+FLOAT_Y_PERIOD_S = 2.2
+FLOAT_X_PCT = 0.0020       # deriva horizontal, fracao da largura (2 px em 1080)
+FLOAT_X_PERIOD_S = 3.1
+
+# --- glow (v2.8: 15% mais fraco que a v2.7 e alcance ~20% maior) ---------------------
+GLOW = {"bloom_sigma": 74, "bloom_alpha": 0.61,     # eram 62 / 0.72
+        "halo_sigma": 22, "halo_alpha": 0.72,       # eram 18 / 0.85
+        "hot_alpha": 0.68}                          # era 0.80
+
 
 def _find_bin(name):
     p = shutil.which(name)
@@ -428,7 +439,7 @@ def render_logo_tile(logo_alpha, width_px, glow_boost, pal):
     lw, lh = logo_alpha.size
     height_px = max(4, int(round(width_px * lh / float(lw))))
     unit = max(width_px, height_px) / 340.0
-    pad = int(max(width_px, height_px) * 0.45)
+    pad = int(max(width_px, height_px) * 0.55)     # folga para o bloom mais aberto da v2.8
     tw, th = width_px + 2 * pad, height_px + 2 * pad
     a = logo_alpha.resize((width_px, height_px), Image.LANCZOS)
     base = Image.new("L", (tw, th), 0)
@@ -438,8 +449,8 @@ def render_logo_tile(logo_alpha, width_px, glow_boost, pal):
     def blurred(radius):
         return np.asarray(base.filter(ImageFilter.GaussianBlur(radius))).astype(np.float32) / 255.0
 
-    bloom = blurred(62 * unit)
-    halo = blurred(18 * unit)
+    bloom = blurred(GLOW["bloom_sigma"] * unit)
+    halo = blurred(GLOW["halo_sigma"] * unit)
     dens = blurred(0.155 * max(width_px, height_px))
     dens = dens / max(1e-6, float(dens.max()))
     out = np.zeros((th, tw, 4), np.float32)
@@ -450,10 +461,10 @@ def render_logo_tile(logo_alpha, width_px, glow_boost, pal):
         out[..., :3] = c * al + out[..., :3] * (1 - al)
         out[..., 3:] = al + out[..., 3:] * (1 - al)
 
-    over(pal["bloom"], np.clip(bloom * 2.6, 0, 1) * 0.72 * glow_boost)
-    over(pal["halo"], np.clip(halo * 1.9, 0, 1) * 0.85 * glow_boost)
+    over(pal["bloom"], np.clip(bloom * 2.6, 0, 1) * GLOW["bloom_alpha"] * glow_boost)
+    over(pal["halo"], np.clip(halo * 1.9, 0, 1) * GLOW["halo_alpha"] * glow_boost)
     over(pal["core"], A)
-    over(pal["hot"], A * np.clip(dens ** 1.35 * 1.15, 0, 1) * 0.80 * glow_boost)
+    over(pal["hot"], A * np.clip(dens ** 1.35 * 1.15, 0, 1) * GLOW["hot_alpha"] * glow_boost)
     return Image.fromarray(np.clip(out * 255.0, 0, 255).astype(np.uint8), "RGBA")
 
 
@@ -497,6 +508,12 @@ def render_sequence(doc, seq_dir):
                 glow = 1.0 + 0.30 * k
             if alpha <= 0.002:
                 continue
+            # flutuacao: seno lento em y e outro, mais lento, em x; entra junto com a subida
+            # (ganho smoothstep) para nao brigar com o overshoot da entrada
+            tf = t - e["t_in"]
+            fgain = smoothstep(clamp01(tf / max(1e-6, e["t_settle"] - e["t_in"])))
+            dy += fgain * FLOAT_Y_PCT * H * math.sin(2 * math.pi * tf / FLOAT_Y_PERIOD_S)
+            dx = fgain * FLOAT_X_PCT * W * math.sin(2 * math.pi * tf / FLOAT_X_PERIOD_S + 1.1)
             width = max(8, int(round(e["width_px"] * scale)))
             key = (e["asset"], width, round(glow, 2), e["color"], json.dumps(e.get("palette")))
             if key not in cache:
@@ -508,7 +525,7 @@ def render_sequence(doc, seq_dir):
             if alpha < 0.999:
                 tile = tile.copy()
                 tile.putalpha(tile.split()[3].point(lambda v, k=alpha: int(v * k)))
-            x = int(round(e["cx"] * W - tile.width / 2.0))
+            x = int(round(e["cx"] * W + dx - tile.width / 2.0))
             y = int(round(e["cy"] * H + dy - tile.height / 2.0))
             frame.alpha_composite(tile, (x, y))
         frame.save(os.path.join(seq_dir, "%05d.png" % (i + 1)))

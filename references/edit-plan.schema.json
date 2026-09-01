@@ -1086,6 +1086,11 @@
     },
     "origin": {
      "$ref": "#/definitions/measured"
+    },
+    "audio_duration": {
+     "type": "number",
+     "minimum": 0,
+     "description": "v2.8: duracao do afade do audio (>= duration); o video escurece em `duration`"
     }
    }
   },
@@ -1207,7 +1212,9 @@
   "brand_logos": {
    "type": "array",
    "description": "v2.7: animacoes de logo de marca (scripts/brand_logos.py) compostas DEPOIS do render, em espaco de tela. Cada item e um evento {id, brand, mention, t_in, t_settle, t_out, t_end, asset, cy, width_px}; copia do brand-logos.json do WORK, guardada aqui so como procedencia.",
-   "items": {"type": "object"}
+   "items": {
+    "type": "object"
+   }
   },
   "push_down": {
    "type": "object",

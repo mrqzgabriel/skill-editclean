@@ -128,7 +128,8 @@ _backup_v1/                   estado anterior à v2, só para referência
 Overrides atuais: legendas sempre centralizadas e em posição vertical única; nunca
 cortar enquanto a pessoa fala; efeitos mais suaves; imagens obrigatórias e só reais;
 vídeo em trechos cortado por parte (regra do influencIA); logo oficial animado no peito
-quando a fala cita uma empresa.
+quando a fala cita uma empresa (flutuando, glow suave); encerramento com fade de áudio e
+tela preta.
 
 ---
 

@@ -454,8 +454,15 @@ Mecanismo único e reconhecível:
 
 ## 11. Encerramento
 
-- **Corte seco.** Sem fade-out, sem dip-to-black, sem cartela final, sem freeze.
-- O vídeo simplesmente termina sobre o plano de conteúdo. Isso é deliberado; mantenha.
+- Referência (medida): **corte seco**, sem fade, sem cartela, sem freeze.
+- **[preferência do Gabriel, 01/09/2026 — prevalece]**: *"no final do vídeo coloque fade out no
+  áudio e a tela ficando preta"*. Padrão desde a v2.8: vídeo escurece em **1,0 s**
+  (`fade=t=out`) e o áudio apaga em **1,3 s** (`afade`), os dois terminando no último frame — o
+  áudio começa a cair 0,3 s antes da imagem, então a voz some suave enquanto a tela já escurece.
+- A cauda do plano cresce para comportar o fade **depois** da última palavra (`tail = última
+  palavra + 0,26 + audio_fade_s`); senão o fade come o fim da frase. Em vídeo em trechos a última
+  parte precisa ter essa sobra: `concat_parts.py --last-tail-extra 1.4`.
+- Continua sem cartela, sem logo final, sem freeze.
 
 ## 12. Cor e acabamento
 
@@ -562,10 +569,13 @@ para frente, alpha-over, com o fundo escuro isso lê como aditivo:
 
 | Camada | Blur (unidade = tamanho/340) | Alfa |
 |---|---|---|
-| bloom | σ 62 | 0,72 × pulso |
-| halo | σ 18 | 0,85 × pulso |
+| bloom | σ 74 (v2.7: 62) | 0,61 × pulso (v2.7: 0,72) |
+| halo | σ 22 (v2.7: 18) | 0,72 × pulso (v2.7: 0,85) |
 | mark | — | 1,0 |
-| núcleo quente | máscara × densidade^1,35 (blur 0,155×tamanho, normalizado) | 0,80 × pulso |
+| núcleo quente | máscara × densidade^1,35 (blur 0,155×tamanho, normalizado) | 0,68 × pulso (v2.7: 0,80) |
+
+v2.8 (pedido 01/09): *"o glow deixe 15% mais fraco e um pouco maior o range"* — alfas ×0,85 e
+σ ×1,2; o tile ganhou folga de 0,55×tamanho para o bloom não cortar na borda.
 
 A "densidade" é o mark desfocado: alta no miolo, baixa nas pontas — é o que deixa o centro
 branco-quente e as pontas na cor, como um neon de verdade.
@@ -574,7 +584,7 @@ branco-quente e as pontas na cor, como um neon de verdade.
 | Fase | Duração | O que acontece |
 |---|---|---|
 | entrada | 0,66 s | sobe 250 px (em 1920) com `ease_out_back` (overshoot 1,28), escala 0,80→1, alfa smoothstep em 0,30 s, brilho +55% decaindo |
-| sustentação | 1,00 s | parado, brilho respira +14% (seno) |
+| sustentação | 1,00 s | brilho respira +14% (seno); **flutua** (v2.8): seno de ±0,45% da altura em y (2,2 s) e ±0,2% da largura em x (3,1 s), ganho smoothstep durante a subida — "como se tivesse flutuando, margem curta" |
 | saída | 0,54 s | sobe 150 px com `ease_in_cubic`, escala →1,07, alfa cai por smoothstep a partir de 8% |
 
 Entra **0,32 s depois de a palavra acender** (a menção fica com o logo já no meio da subida).

@@ -1,6 +1,6 @@
 {
  "profile_name": "EditClean",
- "profile_version": "2.7.0",
+ "profile_version": "2.8.0",
  "derived_from": "ANALISE_TECNICA_EDICAO_VIDEO_REFERENCIA.md + medicao direta de 294 frames de 'Edit Pro/Video referencia.mp4' + preferencias do usuario (ver user_overrides)",
  "reference_material": {
   "duration_s": 152.2,
@@ -794,14 +794,17 @@
   "integration_note": "v2.3.2: o MOVIMENTO da abertura e o zoom do primeiro segmento (herda o supersampling adaptativo; se o primeiro corte cair antes de ~0,95 s o build_plan funde os dois primeiros segmentos). O DESFOQUE e gaussiano DE VERDADE com sigma animado frame a frame: um gblur por frame, sigma = sigma0 x (1-p)^2 (resolve rapido e assenta). Historico de erros: degraus largos de ~2 frames pulsavam; crossfade nitido+desfocado dava cara de dupla exposicao (bordas nitidas sob um veu) e o usuario rejeitou - 'tem que ser aquele desfoque gaussiano'."
  },
  "closing": {
-  "mechanism": "hard_cut",
-  "fade_out": false,
+  "mechanism": "fade_out",
+  "fade_out": true,
+  "fade_out_s": 1.0,
+  "audio_fade_s": 1.3,
   "dip_to_black": false,
   "end_card": false,
   "freeze_frame": false,
   "tail_padding_ms": 0,
-  "note": "O video de referencia termina abruptamente sobre o plano de conteudo. Manter isso como assinatura do estilo.",
-  "confidence": 95
+  "reference_measured": "corte seco sobre o plano de conteudo (confianca 95)",
+  "note": "[preferencia do Gabriel, 01/09/2026] 'no final do video coloque fade out no audio e a tela ficando preta'. PREVALECE sobre o corte seco medido na referencia. A cauda do plano cresce em audio_fade_s depois da ultima palavra (build_plan) e, em video em trechos, concat_parts.py precisa de --last-tail-extra para a ultima parte ter essa cauda.",
+  "confidence": 90
  },
  "color_grading": {
   "look": "quente_discreto",
@@ -945,7 +948,11 @@
   "parts_tight_cut": true,
   "parts_tight_cut_note": "Pedido 01/09 (Fable 5.1, 10 partes do Veo): 'cortar o final de cada trecho pra ficar cortadinho certinho igual quando renderiza no influencIA'. Regra copiada do normalizeTrimConcat; overrides por parte para balbucio da voz gerada.",
   "brand_logo_animation": true,
-  "brand_logo_animation_note": "Pedido 01/09: 'quando fala no comeco do Fable aparecer o logo com efeito de entrada de baixo pra cima e depois saindo no estilo motion design, cinematografico'; depois 'quando falar de alguma empresa como openai, anthropic etc fazer animacao com o logo igual fizemos'. Logo OFICIAL no peito, neon na cor da marca, sobe/segura/sai. Aprovado no Fable 5.1 v1."
+  "brand_logo_animation_note": "Pedido 01/09: 'quando fala no comeco do Fable aparecer o logo com efeito de entrada de baixo pra cima e depois saindo no estilo motion design, cinematografico'; depois 'quando falar de alguma empresa como openai, anthropic etc fazer animacao com o logo igual fizemos'. Logo OFICIAL no peito, neon na cor da marca, sobe/segura/sai. Aprovado no Fable 5.1 v1.",
+  "closing_fade_out": true,
+  "closing_fade_out_note": "Pedido 01/09: fade out no audio (1,3 s) e tela ficando preta (1,0 s) no final. A referencia termina seco; nao 'corrigir' de volta.",
+  "logo_float_softer_glow": true,
+  "logo_float_softer_glow_note": "Pedido 01/09: logo flutuando (margem curta: 8,6 px vertical / 2 px horizontal em 1920x1080), glow 15% mais fraco e mais aberto."
  },
  "parts_concat": {
   "enabled_default": true,
@@ -1015,13 +1022,14 @@
    "alpha": "smoothstep"
   },
   "glow": {
-   "bloom_sigma_unit": 62,
-   "halo_sigma_unit": 18,
-   "bloom_alpha": 0.72,
-   "halo_alpha": 0.85,
-   "hot_alpha": 0.8,
+   "bloom_sigma_unit": 74,
+   "halo_sigma_unit": 22,
+   "bloom_alpha": 0.61,
+   "halo_alpha": 0.72,
+   "hot_alpha": 0.68,
    "hot_density_gamma": 1.35,
-   "breath_pct": 0.14
+   "breath_pct": 0.14,
+   "note": "v2.8 (01/09): 15% mais fraco e alcance ~20% maior que a v2.7 (era 62/18, 0.72/0.85/0.80). Pedido: 'o glow deixe 15% mais fraco e um pouco maior o range'."
   },
   "compose": {
    "render_crf": 14,
@@ -1054,6 +1062,14 @@
    ]
   },
   "confidence": 88,
-  "origin": "inferred+approved"
+  "origin": "inferred+approved",
+  "float": {
+   "y_amplitude_pct_h": 0.0045,
+   "y_period_s": 2.2,
+   "x_amplitude_pct_w": 0.002,
+   "x_period_s": 3.1,
+   "gain": "smoothstep durante a subida",
+   "note": "v2.8 (01/09): 'anime o logo como se ele tivesse flutuando, com uma margem curta de movimento'."
+  }
  }
 }

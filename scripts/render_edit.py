@@ -913,7 +913,9 @@ def build_filtergraph(plan, ass_path=None, overlay_inputs=None):
                 % (float(au.get("target_lufs", -14.0)), float(au.get("true_peak_db", -1.5)))
             )
         if cl.get("enabled") and cl.get("type") in ("fade_out", "dip_to_black"):
-            cdur = max(0.05, float(cl.get("duration", 0.4)))
+            # o audio pode apagar um pouco mais devagar que a imagem (audio_duration >= duration):
+            # a voz some suave enquanto a tela ja esta escurecendo
+            cdur = max(0.05, float(cl.get("audio_duration") or cl.get("duration", 0.4)))
             achain.append("afade=t=out:st=%.4f:d=%.4f" % (max(0.0, total_dur - cdur), cdur))
         achain.append("aformat=sample_fmts=fltp:sample_rates=%d:channel_layouts=stereo"
                       % int(plan["output"].get("audio_sample_rate", 48000)))

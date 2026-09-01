@@ -210,6 +210,9 @@ def main():
     ap.add_argument("--language", default="pt")
     ap.add_argument("--model", default="small")
     ap.add_argument("--report", default=None)
+    ap.add_argument("--last-tail-extra", type=float, default=0.0,
+                    help="segundos a MAIS depois da ultima palavra so na ULTIMA parte, para o fade "
+                         "de encerramento nao apagar a fala (v2.8: use ~1.4 quando closing.fade_out)")
     ap.add_argument("--overwrite", action="store_true")
     args = ap.parse_args()
 
@@ -229,6 +232,8 @@ def main():
 
     tmp = tempfile.mkdtemp(prefix="editclean-partes-")
     report, seg_files, fps_ref = [], [], None
+    kept_idx = [i for i, p in enumerate(parts) if not overrides.get(os.path.basename(p), {}).get("skip")]
+    last_idx = kept_idx[-1] if kept_idx else -1
     log("%d parte(s)" % len(parts))
     for i, src in enumerate(parts):
         base = os.path.basename(src)
@@ -250,6 +255,10 @@ def main():
             start, detail = float(ov["start"]), detail + " | start por override=%.2f" % float(ov["start"])
         if "end" in ov:
             end, detail = float(ov["end"]), detail + " | end por override=%.2f" % float(ov["end"])
+        if i == last_idx and args.last_tail_extra > 0:
+            end2 = min(info["duration"], end + args.last_tail_extra)
+            detail += " | cauda +%.2fs para o fade de encerramento" % (end2 - end)
+            end = end2
         start = max(0.0, min(start, info["duration"] - 0.1))
         end = max(start + 0.1, min(end, info["duration"]))
         warn = []

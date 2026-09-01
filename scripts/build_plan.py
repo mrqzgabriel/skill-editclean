@@ -848,7 +848,11 @@ def main():
         tail = snap(args.tail)
     else:
         last = spans[-1]["end"] if spans else (toks[-1]["end"] if toks else dur)
-        tail = snap(min(dur, last + 0.26))
+        # com fade de encerramento (v2.8) a cauda precisa comportar o fade inteiro depois da
+        # ultima palavra, senao a voz apaga junto com o final da frase
+        extra = (float(prof["closing"].get("audio_fade_s", prof["closing"].get("fade_out_s", 1.0)))
+                 if prof["closing"].get("fade_out") else 0.0)
+        tail = snap(min(dur, last + 0.26 + extra))
 
     bounds, per_third = pick_boundaries(man, toks, prof, fps, head, tail)
     trans_bounds = place_transitions(bounds, prof, n_trans=3)
@@ -1375,8 +1379,14 @@ def main():
                     "scale_start": prof["opening"]["scale_start"],
                     "easing": prof["opening"]["easing"],
                     "confidence": 92, "origin": "inferred"},
-        "closing": {"enabled": True, "type": "hard_cut", "duration": 0.0,
-                    "confidence": 95, "origin": "measured"},
+        "closing": ({"enabled": True, "type": "fade_out",
+                     "duration": float(prof["closing"].get("fade_out_s", 1.0)),
+                     "audio_duration": float(prof["closing"].get("audio_fade_s",
+                                                                 prof["closing"].get("fade_out_s", 1.0))),
+                     "confidence": 90, "origin": "inferred"}
+                    if prof["closing"].get("fade_out") else
+                    {"enabled": True, "type": "hard_cut", "duration": 0.0,
+                     "confidence": 95, "origin": "measured"}),
         "color": {"enabled": True, "eq": prof["color_grading"]["eq"],
                   "colorbalance": prof["color_grading"]["colorbalance"],
                   "sharpen": prof["color_grading"]["sharpening"]["amount"],
