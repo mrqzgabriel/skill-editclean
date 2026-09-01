@@ -1,6 +1,6 @@
 {
  "profile_name": "EditClean",
- "profile_version": "2.8.0",
+ "profile_version": "2.9.0",
  "derived_from": "ANALISE_TECNICA_EDICAO_VIDEO_REFERENCIA.md + medicao direta de 294 frames de 'Edit Pro/Video referencia.mp4' + preferencias do usuario (ver user_overrides)",
  "reference_material": {
   "duration_s": 152.2,
@@ -952,7 +952,9 @@
   "closing_fade_out": true,
   "closing_fade_out_note": "Pedido 01/09: fade out no audio (1,3 s) e tela ficando preta (1,0 s) no final. A referencia termina seco; nao 'corrigir' de volta.",
   "logo_float_softer_glow": true,
-  "logo_float_softer_glow_note": "Pedido 01/09: logo flutuando (margem curta: 8,6 px vertical / 2 px horizontal em 1920x1080), glow 15% mais fraco e mais aberto."
+  "logo_float_softer_glow_note": "Pedido 01/09: logo flutuando (margem curta: 8,6 px vertical / 2 px horizontal em 1920x1080), glow 15% mais fraco e mais aberto.",
+  "influencia_regenerate_on_mispronunciation": true,
+  "influencia_regenerate_on_mispronunciation_note": "Pedido 01/09: 'quando identificar algum problema assim, entrar no sistema influencIA e regenerar, podendo ate mesmo mudar a copy pra pronuncia ficar certa'. Corrigir na origem, nunca so na legenda."
  },
  "parts_concat": {
   "enabled_default": true,
@@ -1071,5 +1073,31 @@
    "gain": "smoothstep durante a subida",
    "note": "v2.8 (01/09): 'anime o logo como se ele tivesse flutuando, com uma margem curta de movimento'."
   }
+ },
+ "influencia": {
+  "script": "scripts/influencia_fix_part.py",
+  "transcriber": "openai whisper-1 (lib/whisper.ts do sistema)",
+  "api_default": "https://solange-solange.feyjc1.easypanel.host/api",
+  "env_key_in_credentials": "influencia_env",
+  "classes": {
+   "PRONUNCIA": "<=3 tokens trocados",
+   "BALBUCIO": ">=6 tokens a mais e <=1 faltando",
+   "DIVERGE": "resto"
+  },
+  "poll_s": 15,
+  "poll_max_s": 1500,
+  "retries_default": 2,
+  "word_choice_rule": "palavra que a mesma voz ja pronunciou bem no mesmo video; mesmo sentido; sem respelling fonetico; avisar o usuario",
+  "babble_rule": "copia curta -> Veo enche 8s com fonemas; nao regenerar igual: trim (overrides) ou frase mais longa com OK do usuario",
+  "measured_fable51": {
+   "part": 2,
+   "copy_before": "sem derrubar tudo",
+   "heard": "derrugar",
+   "attempts_wrong": 2,
+   "copy_after": "sem quebrar tudo",
+   "attempt_ok": 3
+  },
+  "confidence": 90,
+  "origin": "measured"
  }
 }

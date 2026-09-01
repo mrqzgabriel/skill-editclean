@@ -605,3 +605,23 @@ transparente comprime a ~4 KB) e `overlay=0:0:eof_action=pass:format=auto` sobre
 entrada só, sem `itsoffset`, sem `-loop`. Segunda passagem de encode (render em crf 14 → final
 crf 18, áudio copiado). `-t` casa a duração com o vídeo: o AAC sai ~67 ms mais longo que os
 frames e o `validate_output` procura um frame em `duração − 0,10` que não existe.
+
+## 18. Pronúncia errada em parte do influencIA — corrigir na origem **[v2.9, pedido do Gabriel 01/09]**
+
+O Veo Lite lê a cópia com o próprio TTS (`gemini.ts`: *"They are speaking this text: …"*) e o
+ElevenLabs STS troca a voz depois — a pronúncia errada nasce no Veo e sobrevive à troca de voz.
+Medido no Fable 5.1: a cópia dizia "derrubar" (certo) e a voz disse "derrugar" em **duas**
+gerações seguidas; a terceira, com a cópia trocada para "quebrar", saiu certa.
+
+`scripts/influencia_fix_part.py`:
+
+| Etapa | Como |
+|---|---|
+| detectar | whisper-1 (mesmo transcritor do sistema) por parte, diff de tokens contra `copy_parts.text` via `GET /projects/:id`; número por extenso = dígito |
+| classificar | `PRONUNCIA` (≤3 trocadas), `BALBUCIO` (≥6 palavras a mais e ≤1 faltando — cópia curta, o Veo enche os 8 s com fonemas), `DIVERGE` |
+| corrigir | `PUT /copy-parts/:id` + `POST /copy-parts/:id/generate-video` na **produção** (evita a briga de pollers local × prod), poll `GET /video-parts/:id` a cada 15 s, teto 25 min |
+| reconferir | whisper-1 no vídeo novo; só troca `parteN.mp4` (antiga vira `parteN_vK_<tag>.mp4`) se bater com a cópia; `--retries 2` |
+
+Escolha da palavra (editorial): a mesma voz **já pronunciou bem** no mesmo vídeo; mesmo sentido;
+sem respelling fonético; contar ao usuário. Balbucio não se resolve regenerando com o mesmo texto —
+vai para o trim (§16) ou para uma frase mais longa, se o usuário aprovar o texto.

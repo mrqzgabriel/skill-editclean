@@ -92,6 +92,57 @@ Depois disso o master é a entrada normal da skill (§2 em diante). O `--scale` 
 1080×1920 no mesmo encode; entregue nessa resolução (nativa do Reels e os prints inseridos ficam
 legíveis). Registre no relatório final quanto cada parte perdeu e os overrides usados.
 
+## 1c. Vídeo do influencIA: pronúncia errada → corrigir NA ORIGEM — v2.9
+
+Se as partes vieram do influencIA (clipes do Veo com a voz trocada pelo ElevenLabs), a voz
+gerada às vezes **pronuncia uma palavra errado** ("derrubar" → "derrugar") ou **balbucia**. Isso
+não se conserta na edição: a legenda até esconde, mas o áudio continua errado. Pedido do Gabriel
+(01/09): *"quando identificar algum problema assim, entrar no sistema influencIA e regenerar,
+podendo até mesmo mudar a copy pra pronúncia ficar certa"*. Fluxo, sempre nesta ordem:
+
+**1. Detectar** — antes do `concat_parts.py`, e sempre que a transcrição do §4 mostrar palavra
+que não existe:
+
+```bash
+python3 "$SKILL/scripts/influencia_fix_part.py" check --project "<trecho do título>" \
+  --parts-dir "<pasta das partes>" --report "$WORK/influencia_check.json"
+```
+
+Transcreve cada parte com o **whisper-1 da OpenAI** (o mesmo transcritor do sistema, `lib/whisper.ts`)
+e compara token a token com a **cópia** daquela parte no influencIA. Número por extenso vs dígito
+não conta. Classes: `OK`, `PRONUNCIA` (1–3 palavras trocadas), `BALBUCIO` (fala continua muito
+além da cópia), `DIVERGE` (outra coisa; olhar).
+
+**2. Decidir a palavra nova** — decisão editorial sua, não do script:
+- Prefira uma palavra que **a mesma voz já pronunciou bem no mesmo vídeo** (no Fable, "derrubar"
+  virou **"quebrar"**, que ela já dizia certo na parte 1 e ecoa o título).
+- Mesmo sentido, mesma força; frase igual no resto. **Não** faça respelling fonético ("derru-bar",
+  "derrubá") — em português não há padrão e o TTS lê letra por letra ou pausa.
+- Diga ao usuário o que trocou. Não mude número, nome próprio nem dado.
+- `BALBUCIO` = cópia curta demais para os 8 s (o prompt do Veo obriga a boca a mexer o tempo
+  todo). Regenerar com o mesmo texto repete. Padrão: **cortar no `--overrides` do §1b** e avisar;
+  só encher a frase se o usuário topar o texto novo.
+
+**3. Regenerar só a parte, pela produção:**
+
+```bash
+python3 "$SKILL/scripts/influencia_fix_part.py" fix --project "<título>" --part 2 \
+  --text "A promessa é simples e pesada, tocar projetos longos sem quebrar tudo por um erro pequeno." \
+  --parts-dir "<pasta das partes>" --tag derrugar
+```
+
+Faz `PUT /copy-parts/:id` (texto), `POST /copy-parts/:id/generate-video`, espera o poller da
+produção (Veo Lite ~2–4 min + troca de voz), **reconfere com o whisper-1** e só então baixa o
+vídeo novo para a pasta, guardando o antigo como `parteN_vK_<tag>.mp4`. Se ainda sair errado,
+regenera de novo (`--retries`, padrão 2). Usa a produção de propósito: local e produção dividem a
+mesma fila e o poller de lá pode marcar como falha o que o local iniciou.
+
+**4. Continuar** do §1b com as partes já corrigidas. Registre no relatório: palavra, cópia antiga →
+nova, nº de tentativas.
+
+Credenciais (login, senha, chave OpenAI) vêm do `.env` do influencIA, cujo caminho está em
+`.credentials.json` (`influencia_env`, `influencia_api`) — nunca imprima.
+
 ## 2. Validar entrada e dependências
 
 ```bash
@@ -423,13 +474,16 @@ fonte oficial); resultado da validação; limitações reais.
 6. Nunca inventar dados, logotipos ou marcas.
 7. Nunca adicionar música sem arquivo fornecido pelo usuário.
 8. Nunca alterar o sentido das falas.
-9. Credencial só de `OPENAI_API_KEY`/`APIFY_TOKEN` no ambiente ou de `$SKILL/.credentials.json`.
-   Nunca vasculhar outros projetos, nunca imprimir a chave.
+9. Credencial só de `OPENAI_API_KEY`/`APIFY_TOKEN` no ambiente ou de `$SKILL/.credentials.json`
+   — mais o `.env` do influencIA apontado por `influencia_env` (só para o §1c). Nunca vasculhar
+   outros projetos, nunca imprimir chave nem senha.
 10. Nunca declarar sucesso sem `validate_output.py` aprovar.
 11. Logo de marca só de **fonte oficial** registrada em `brand-logos.json`; sem asset, sem
     animação. Nunca redesenhar, nunca "parecido".
 12. Vídeo em trechos: **ler a transcrição de cada parte** antes de aceitar o corte automático —
     balbucio de voz gerada passa pelo Whisper como se fosse fala.
+13. Pronúncia errada em parte do influencIA se corrige **na origem** (§1c), nunca só na legenda;
+    e a parte regenerada só entra depois de **reconferida** pelo whisper-1.
 
 ## Notas de implementação (armadilhas já resolvidas)
 

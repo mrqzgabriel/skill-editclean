@@ -48,6 +48,10 @@ chmod 600 ~/.claude/skills/editclean/.credentials.json
 
 Também funciona por variável de ambiente: `OPENAI_API_KEY`, `APIFY_TOKEN`.
 
+Para o `influencia_fix_part.py` (vídeos que vieram do influencIA) acrescente ao mesmo arquivo
+`"influencia_env"` (caminho do `.env` do influencIA, de onde saem LOGIN/SENHA/OPENAI_API_KEY)
+e `"influencia_api"` (URL da API de produção). Ou `INFLUENCIA_ENV` / `INFLUENCIA_API` no ambiente.
+
 ### Fontes
 
 - **Helvetica Neue** vem do macOS (`/System/Library/Fonts/HelveticaNeue.ttc`).
@@ -71,6 +75,8 @@ Flags: `--output`, `--aspect keep|9:16|1:1|16:9`, `--captions auto|off`,
 ### Pipeline
 
 ```
+influencia_fix_part → parteN.mp4    (só vídeo do influencIA: pronúncia errada → troca a cópia
+                                     e regenera a parte na origem, reconferindo com whisper-1)
 concat_parts.py     → master.mp4    (só quando o vídeo chega em trechos: corta o ar morto
                                      de cada parte, regra do influencIA, e junta)
 analyze_video.py    → manifest.json (silêncios, speech_spans, cenas, frames)
@@ -106,6 +112,7 @@ scripts/
   fetch_images.py             busca imagens (Creative Commons)
   concat_parts.py             vídeo em trechos: corta o fim/começo morto de cada parte e junta
   brand_logos.py              logo de marca animado (plan / render / fetch)
+  influencia_fix_part.py      influencIA: acha pronúncia errada (whisper-1 vs cópia) e regenera a parte pela API
 references/brand-logos.json   registro de marcas: aliases, fonte OFICIAL do logo, cor
 assets/fonts/                 Playfair Display (OFL)
 assets/models/                YuNet, detector de rosto (MIT, 232 KB)
