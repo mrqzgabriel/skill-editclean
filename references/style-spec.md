@@ -625,3 +625,17 @@ gerações seguidas; a terceira, com a cópia trocada para "quebrar", saiu certa
 Escolha da palavra (editorial): a mesma voz **já pronunciou bem** no mesmo vídeo; mesmo sentido;
 sem respelling fonético; contar ao usuário. Balbucio não se resolve regenerando com o mesmo texto —
 vai para o trim (§16) ou para uma frase mais longa, se o usuário aprovar o texto.
+
+## 19. Capa do vídeo — igual ao influencIA **[v2.10, pedido do Gabriel 01/09]**
+
+`scripts/make_cover.py` + `scripts/cover_gemini.cjs` copiam o `generateThumbnail` do sistema:
+`gemini-3-pro-image` no Vertex AI (location `global`), `generateContent` com [foto de referência
+do influencer, (logo oficial), prompt], `responseModalities IMAGE+TEXT`, e `fitToVertical`
+(contain em 1080×1920 sobre RGB 18,18,24). O prompt é o do sistema — pessoa em primeiro plano do
+peito para cima, fundo cinematográfico escuro ligado ao assunto, texto grande em vermelho
+`#E53935` / amarelo `#FFD600` / branco na metade de baixo, sem nome, sem @, sem texto na cena —
+com dois acréscimos: `--headline` (frase exata do texto grande) e `--logo` (logotipo oficial do
+`brand-logos.json`, enviado sobre fundo escuro como segunda imagem, com ordem de reproduzir sem
+redesenhar). A credencial de serviço é lida de `gcp_credentials` do próprio sistema, em memória.
+Medido no Fable 5.1: 34 s, imagem 1072×1920 do modelo → 1080×1920. Salvar a capa ao lado do vídeo
+(Desktop) e conferir texto/acentos antes de entregar.

@@ -427,6 +427,32 @@ referência termina seco; **não "corrija" de volta**. O `build_plan` já estend
 última palavra para o fade não comer a frase; confira no relatório a duração de saída e, em vídeo
 em trechos, o `--last-tail-extra` do §1b.
 
+## 7d. Capa (thumbnail) do vídeo — v2.10
+
+Depois do vídeo aprovado, gere a **capa** igual ao influencIA faz (pedido do Gabriel 01/09: "gere
+uma capa igual é gerado no sistema… com o logo do Claude falando que a Anthropic lançou o Fable"):
+
+```bash
+python3 "$SKILL/scripts/make_cover.py" --project "<título>" \
+  --headline "ANTHROPIC LANÇOU O FABLE 5.1" --logo claude \
+  --out "<pasta>/<nome>_CAPA.png"
+```
+
+- É o **mesmo método** do `generateThumbnail` do sistema: `gemini-3-pro-image` no Vertex
+  (location `global`), foto de referência do influencer (baixada do projeto pela API), prompt de
+  thumbnail (pessoa do peito para cima em primeiro plano, fundo cinematográfico escuro ligado ao
+  assunto, texto GRANDE em vermelho/amarelo/branco na metade de baixo, 9:16, sem nome, sem @),
+  e o ajuste final para 1080×1920 sobre (18,18,24). Credencial de serviço vem da tabela
+  `gcp_credentials` do próprio sistema (`cover_gemini.cjs`, usa as libs do repositório).
+- Por cima disso: `--headline` fixa a frase do texto grande (senão o modelo tira do título) e
+  `--logo <marca>` manda o logotipo **oficial** do registro (`brand-logos.json`) como segunda
+  imagem, com ordem de reproduzir exatamente. Sem `--logo` = igual ao sistema.
+- Sem projeto no influencIA: `--ref <foto> --title "..."`.
+- Grava um `.capa.json` ao lado com prompt, modelo e entradas (procedência). Olhe a capa antes de
+  entregar: o modelo às vezes erra acento ou inventa segunda frase — regenerar é barato (~35 s).
+- Versão do produto vem do vídeo/cópia, não do pedido ("Fable 4.1 sei lá" → 5.1, que é o que o
+  vídeo diz).
+
 ## 8. Validar a saída
 
 ```bash

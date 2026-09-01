@@ -87,6 +87,7 @@ render_edit.py      → render.partial.mp4
 brand_logos.py      → saída.partial.mp4 (logo oficial animado no peito quando a fala
                                          cita uma empresa; pula se não houver menção)
 validate_output.py  → aprova ou reprova
+make_cover.py       → <nome>_CAPA.png (capa igual ao thumbnail do influencIA, opcional)
 ```
 
 Só depois de aprovado o `.partial.mp4` vira o arquivo final.
@@ -113,6 +114,8 @@ scripts/
   concat_parts.py             vídeo em trechos: corta o fim/começo morto de cada parte e junta
   brand_logos.py              logo de marca animado (plan / render / fetch)
   influencia_fix_part.py      influencIA: acha pronúncia errada (whisper-1 vs cópia) e regenera a parte pela API
+  make_cover.py               capa 1080x1920 igual ao thumbnail do influencIA (+ logo oficial opcional)
+  cover_gemini.cjs            helper Node do make_cover (gemini-3-pro-image via credencial do sistema)
 references/brand-logos.json   registro de marcas: aliases, fonte OFICIAL do logo, cor
 assets/fonts/                 Playfair Display (OFL)
 assets/models/                YuNet, detector de rosto (MIT, 232 KB)
