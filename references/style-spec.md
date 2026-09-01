@@ -637,7 +637,7 @@ cara de bravo"*. Daí o `--style cinema` (padrão):
 |---|---|
 | imagem | `gemini-3-pro-image` no Vertex (`global`, credencial de `gcp_credentials` do sistema, `cover_gemini.cjs`) com [foto de referência, logo oficial, prompt]; prompt = frame de filme SEM texto: expressão calma/confiante (bravo proibido), lente anamórfica, key quente + rim frio, grão fino, grading contido, fundo do `--mood`, logo como fonte de luz reproduzido exatamente, terço inferior calmo |
 | ajuste | contain em 1080×1920 sobre (18,18,24), igual ao `fitToVertical` do sistema |
-| tipografia | composta em PIL com as fontes da legenda: Helvetica Neue Bold (índice 1 do TTC) + Playfair Display Italic 1,55× na ênfase (`*…*`), `#FCF8F6`, halo preto blur 0,22×corpo a 62%, glow branco no serifado (blur 0,06×corpo a 55%), degradê preto de 52% até 78% na base; auto-fit 70–150 px, ≤3 linhas, 86% da largura, fundo do bloco em 90,5% |
+| tipografia | composta em PIL com as fontes da legenda: Helvetica Neue Bold (índice 1 do TTC) + Playfair Display Italic 1,55× na ênfase (`*…*`), `#FCF8F6`, halo preto blur 0,22×corpo a 62%, glow branco no serifado (blur 0,06×corpo a 55%), degradê preto de 52% até 78% na base; auto-fit 70–150 px, ≤3 linhas, 86% da largura, bloco **centrado em 77,5% da altura** (v2.12; antes fundo em 90,5%: "tinha que ficar mais no centro"); ênfase serifada na **cor do logo** (v2.12: média dos pixels laranja saturados e claros da própria imagem, V elevado a ≥0,92; fallback `#D97757`), glow da mesma cor a 60% |
 
 Por que o texto não vem do modelo: ele não reproduz fonte específica (e a legenda do vídeo é a
 assinatura do estilo). Por que sem texto na geração: qualquer letra que o modelo invente briga com

@@ -451,8 +451,12 @@ Como o `cinema` funciona (spec §19):
 2. **Tipografia da legenda** composta pelo script com as fontes reais: Helvetica Neue Bold nas
    palavras corridas, Playfair Display Italic **1,55×** na ênfase (marque com `*asteriscos*` no
    `--headline`), cor `#FCF8F6`, halo escuro difuso, glow claro no serifado e degradê escuro no
-   rodapé. Auto-fit até 3 linhas em 86% da largura, bloco ancorado em 90,5% da altura.
-   `--text-only --ref <imagem>` recompõe só o texto (iterar sem gastar crédito).
+   rodapé. Auto-fit até 3 linhas em 86% da largura; o bloco é **centrado em 77,5% da altura**
+   (`--text-center`), não colado no rodapé. A ênfase serifada sai **na cor do logo**
+   (`--accent-color auto` lê o laranja com que o logo foi renderizado na própria imagem; `#hex`
+   fixa; `none` = branco) com glow quente da mesma cor — pedido 01/09: "texto mais no centro e o
+   Fable 5.1 laranja na mesma cor do logo". `--text-only --ref <imagem>` recompõe só o texto
+   (iterar sem gastar crédito).
 
 Gere **mais de uma variante** (moods diferentes) e escolha olhando: rosto idêntico à referência e
 sem cara de bravo são eliminatórios; logo reproduzido uma vez, sem redesenho; título legível e

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-EditClean - make_cover.py  (v2.11)
+EditClean - make_cover.py  (v2.12)
 
 Capa (thumbnail) do video editado. Dois estilos:
 
@@ -228,9 +228,32 @@ def layout(runs, max_w, max_h, accent_ratio, size_hi, size_lo):
     return size_lo, [runs], sans, serif
 
 
-def compose_headline(image_path, headline, out_path, bottom_pct=0.905, max_w_pct=0.86, max_h_pct=0.30):
+def accent_color_from_image(image_path, fallback="#D97757"):
+    """Cor da enfase = a cor com que o LOGO saiu na imagem (pixels laranja saturados e claros);
+    se nao houver o bastante, a cor oficial da marca."""
+    from PIL import Image
+    import colorsys
+    im = Image.open(image_path).convert("RGB").resize((270, 480))
+    acc, n = [0, 0, 0], 0
+    for r, g, b in im.getdata():
+        h, s_, v = colorsys.rgb_to_hsv(r / 255.0, g / 255.0, b / 255.0)
+        if 0.02 <= h <= 0.13 and s_ >= 0.45 and v >= 0.62:
+            acc[0] += r; acc[1] += g; acc[2] += b; n += 1
+    if n < 150:
+        return fallback
+    r, g, b = [int(x / n) for x in acc]
+    # garante leitura sobre fundo escuro: leva um pouco para o claro sem lavar
+    h, s_, v = colorsys.rgb_to_hsv(r / 255.0, g / 255.0, b / 255.0)
+    r, g, b = colorsys.hsv_to_rgb(h, min(1.0, s_ * 0.95), max(v, 0.92))
+    return "#%02x%02x%02x" % (int(r * 255), int(g * 255), int(b * 255))
+
+
+def compose_headline(image_path, headline, out_path, center_pct=0.775, max_w_pct=0.86, max_h_pct=0.30,
+                     accent_color="auto"):
     """Compoe o titulo com Helvetica Neue Bold + Playfair Italic (enfase 1,55x), halo difuso,
-    glow no serifado e degrade escuro no rodape, sobre a imagem 1080x1920."""
+    glow no serifado e degrade escuro no rodape, sobre a imagem 1080x1920.
+    v2.12 (pedido 01/09): bloco CENTRADO em center_pct da altura (era ancorado no rodape) e a
+    enfase serifada na COR DO LOGO (accent_color="auto" le da imagem; ou hex; ou None = branco)."""
     from PIL import Image, ImageDraw, ImageFilter
     cap = _profile_caption()
     base = Image.open(image_path).convert("RGBA")
@@ -252,8 +275,11 @@ def compose_headline(image_path, headline, out_path, bottom_pct=0.905, max_w_pct
     metrics = [_measure(l, sans, serif) for l in lines]
     line_h = [int((m[1] + m[2]) * 1.02) for m in metrics]
     block_h = sum(line_h)
-    y = int(H * bottom_pct) - block_h
+    y = int(H * center_pct) - block_h // 2
     color = tuple(int(cap["color"].lstrip("#")[i:i + 2], 16) for i in (0, 2, 4))
+    if accent_color == "auto":
+        accent_color = accent_color_from_image(image_path)
+    acc_rgb = (tuple(int(accent_color.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4)) if accent_color else color)
 
     halo = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
@@ -271,8 +297,8 @@ def compose_headline(image_path, headline, out_path, bottom_pct=0.905, max_w_pct
             pos = (x - bbox[0], baseline - fa)
             dh.text(pos, txt, font=f, fill=(0, 0, 0, 255), stroke_width=max(2, size // 14), stroke_fill=(0, 0, 0, 255))
             if acc:
-                dg.text(pos, txt, font=f, fill=(255, 255, 255, 255), stroke_width=max(1, size // 40), stroke_fill=(255, 255, 255, 255))
-            dt.text(pos, txt, font=f, fill=color + (255,))
+                dg.text(pos, txt, font=f, fill=acc_rgb + (255,), stroke_width=max(1, size // 30), stroke_fill=acc_rgb + (255,))
+            dt.text(pos, txt, font=f, fill=(acc_rgb if acc else color) + (255,))
             x += bbox[2] - bbox[0]
             if i < len(line) - 1:
                 x += int(space * (1.6 if acc or line[i + 1][1] else 1.0))
@@ -281,13 +307,14 @@ def compose_headline(image_path, headline, out_path, bottom_pct=0.905, max_w_pct
     halo = halo.filter(ImageFilter.GaussianBlur(max(6, size * 0.22)))
     halo.putalpha(halo.split()[3].point(lambda v: int(v * 0.62)))
     halo = Image.eval(halo, lambda v: v)  # no-op para manter RGBA
-    glow = glow.filter(ImageFilter.GaussianBlur(max(3, size * 0.06)))
-    glow.putalpha(glow.split()[3].point(lambda v: int(v * 0.55)))
+    glow = glow.filter(ImageFilter.GaussianBlur(max(3, size * 0.10)))
+    glow.putalpha(glow.split()[3].point(lambda v: int(v * 0.60)))
     base.alpha_composite(halo, (0, max(2, size // 40)))
     base.alpha_composite(glow)
     base.alpha_composite(text)
     base.convert("RGB").save(out_path, "PNG")
-    return {"font_size": size, "lines": [" ".join(w for w, _ in l) for l in lines]}
+    return {"font_size": size, "lines": [" ".join(w for w, _ in l) for l in lines],
+            "center_pct": center_pct, "accent_color": accent_color}
 
 
 def fit_vertical(src, dest, w=W, h=H):
@@ -315,6 +342,8 @@ def main():
     ap.add_argument("--no-logo", action="store_true")
     ap.add_argument("--mood", default="studio_haze", help="cenario do cinema: %s ou texto livre" % ", ".join(MOODS))
     ap.add_argument("--text-only", action="store_true", help="so compor a tipografia sobre --ref")
+    ap.add_argument("--text-center", type=float, default=0.775, help="centro vertical do bloco de titulo (fracao da altura)")
+    ap.add_argument("--accent-color", default="auto", help="cor da enfase serifada: auto (cor do logo na imagem), #hex ou none")
     ap.add_argument("--keep-raw", default=None, help="salvar tambem a imagem sem texto neste caminho")
     ap.add_argument("--out", required=True)
     ap.add_argument("--model", default="gemini-3-pro-image")
@@ -328,7 +357,8 @@ def main():
     if args.text_only:
         if not args.ref or not args.headline:
             raise SystemExit("--text-only precisa de --ref (imagem) e --headline")
-        info = compose_headline(args.ref, args.headline, args.out)
+        acc = None if str(args.accent_color).lower() == "none" else args.accent_color
+        info = compose_headline(args.ref, args.headline, args.out, center_pct=args.text_center, accent_color=acc)
         meta.update({"base_image": args.ref, "typography": info})
         json.dump(meta, open(os.path.splitext(args.out)[0] + ".capa.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         log("tipografia composta sobre %s -> %s (corpo %d px, %d linha(s))" % (args.ref, args.out, info["font_size"], len(info["lines"])))
@@ -397,7 +427,8 @@ def main():
     if args.keep_raw:
         shutil.copyfile(fitted, args.keep_raw)
     if args.style == "cinema" and args.headline:
-        info = compose_headline(fitted, args.headline, args.out)
+        acc = None if str(args.accent_color).lower() == "none" else args.accent_color
+        info = compose_headline(fitted, args.headline, args.out, center_pct=args.text_center, accent_color=acc)
         meta["typography"] = info
     else:
         shutil.copyfile(fitted, args.out)
