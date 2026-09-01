@@ -645,3 +645,26 @@ a tipografia real. Moods: `studio_haze` (névoa e feixes quentes), `void_light` 
 volumétrica), `server_room` (corredor de racks desfocado), `city_window` (bokeh de cidade
 chuvosa). Gerar 2–3 e julgar: rosto idêntico + calmo (eliminatório), logo uma vez e fiel, título
 legível.
+
+### Zonas da interface do Reels — o título nunca embaixo delas **[v2.13, pesquisado 01/09/2026]**
+
+Em 1080×1920, medido/consolidado de guias de 2026 (Outfy, Zeely, Koro, JW Tool Box, Behaviour
+Digital sobre o guia de anúncios da Meta):
+
+| Zona | Organico | Anúncio (guia da Meta) |
+|---|---|---|
+| cabeçalho (perfil, câmera) | ~220 px | 14% = 269 px |
+| rodapé (usuário, legenda, áudio, CTA) | ~420 px → texto acima de **y 1500** | 35% = 672 px → texto acima de y 1248 |
+| coluna de ícones à direita | ~120 px | 6% de cada lado |
+| margem esquerda | ~60 px | 6% |
+| **grade do perfil** | 4:5 mostra y 285–1635; **1:1 mostra só y 420–1500** | idem |
+
+Regra implementada em `compose_headline`: faixa útil = do **queixo detectado** (+2% da altura) até
+`min(rodapé, grade 1:1) − 1,2%` = 1477 px; largura ≤ 78% e dentro de x 120–960. O corpo é
+ajustado à faixa e o bloco centrado nela. No Fable (queixo em 912 px) deu bloco 954–1473 px,
+corpo 114 px, centro 63,2% — antes estava em 77,5% (bloco até 1700 px, ou seja, **embaixo da
+legenda do Reels e fora do recorte 1:1**). `--safe ads` para peça paga; `--show-safe` desenha as
+zonas para conferir. Se o rosto estiver tão baixo que sobrem < 12% de altura, o bloco pode
+cobrir o queixo (registrar). Fontes: outfy.com/blog/instagram-safe-zone, zeely.ai/blog/master-
+instagram-safe-zones, getkoro.app/blog/instagram-reels-dimensions, jwtoolbox.com (cover cheat
+sheet 2026), behaviour.digital (Meta 14/35/6).

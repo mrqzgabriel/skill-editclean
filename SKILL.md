@@ -451,8 +451,14 @@ Como o `cinema` funciona (spec §19):
 2. **Tipografia da legenda** composta pelo script com as fontes reais: Helvetica Neue Bold nas
    palavras corridas, Playfair Display Italic **1,55×** na ênfase (marque com `*asteriscos*` no
    `--headline`), cor `#FCF8F6`, halo escuro difuso, glow claro no serifado e degradê escuro no
-   rodapé. Auto-fit até 3 linhas em 86% da largura; o bloco é **centrado em 77,5% da altura**
-   (`--text-center`), não colado no rodapé. A ênfase serifada sai **na cor do logo**
+   rodapé. **O título nunca fica embaixo da interface do Reels** (v2.13, pedido 01/09 "pesquise
+   os ranges das coisas no Reels; o texto nunca deve ficar embaixo dessas coisas"): a faixa útil
+   vai do **queixo** (YuNet na própria imagem, +2%) até **y = 1500 px** (rodapé de ~420 px com
+   usuário/legenda/áudio **e** o recorte 1:1 da grade do perfil, que só mostra 420–1500), com
+   largura ≤ 78% e ≥ 120 px de cada lado (coluna de ícones à direita). O corpo se ajusta à faixa
+   (auto-fit) e o bloco fica centrado nela (`--text-center` força; `--safe ads` usa o guia da
+   Meta, rodapé de 35% = y ≤ 1248; `--show-safe` grava `<out>.zonas.png` com as zonas desenhadas
+   para conferir). Números e fontes na spec §19. A ênfase serifada sai **na cor do logo**
    (`--accent-color auto` lê o laranja com que o logo foi renderizado na própria imagem; `#hex`
    fixa; `none` = branco) com glow quente da mesma cor — pedido 01/09: "texto mais no centro e o
    Fable 5.1 laranja na mesma cor do logo". `--text-only --ref <imagem>` recompõe só o texto

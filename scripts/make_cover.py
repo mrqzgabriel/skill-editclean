@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-EditClean - make_cover.py  (v2.12)
+EditClean - make_cover.py  (v2.13)
 
 Capa (thumbnail) do video editado. Dois estilos:
 
@@ -51,6 +51,43 @@ FONT_SANS = "/System/Library/Fonts/HelveticaNeue.ttc"     # index 1 = Bold (mesm
 FONT_SERIF = os.path.join(SKILL_ROOT, "assets", "fonts", "PlayfairDisplay-Italic[wght].ttf")
 BG = (18, 18, 24)
 W, H = 1080, 1920
+YUNET = os.path.join(SKILL_ROOT, "assets", "models", "face_detection_yunet_2023mar.onnx")
+
+# Zonas cobertas pela interface do Reels em 1080x1920 (pesquisa 01/09/2026; ver style-spec 19):
+#   organico: cabecalho ~220 px; rodape ~420 px (usuario, legenda, audio); coluna de icones
+#             ~120 px a direita; 60 px a esquerda. A capa ainda e recortada no perfil: grade 4:5
+#             mantem y 285-1635, e a grade 1:1 mantem y 420-1500.
+#   ads:      guia da Meta = 14% no topo (269 px), 35% no rodape (672 px), 6% nas laterais.
+# O titulo fica SEMPRE dentro da faixa util (nunca embaixo dessas coisas).
+SAFE_ZONES = {
+    "organic": {"top": 420, "bottom": 1500, "left": 120, "right": 960,
+                "note": "rodape 420 + grade 1:1 (420-1500) + icones da direita 120"},
+    "ads":     {"top": 420, "bottom": 1248, "left": 120, "right": 960,
+                "note": "Meta: 14% topo / 35% rodape / 6% laterais, mais a grade 1:1"},
+    "none":    {"top": 0, "bottom": H, "left": 0, "right": W, "note": "sem restricao"},
+}
+
+
+def chin_y(image_path):
+    """Queixo da pessoa na imagem (px), pelo mesmo YuNet da skill; None se nao achar."""
+    try:
+        import cv2
+        import numpy as np
+        if not os.path.exists(YUNET) or not hasattr(cv2, "FaceDetectorYN_create"):
+            return None
+        img = cv2.imread(image_path)
+        if img is None:
+            return None
+        scale = 640.0 / max(img.shape[:2])
+        small = cv2.resize(img, (int(img.shape[1] * scale), int(img.shape[0] * scale)))
+        det = cv2.FaceDetectorYN_create(YUNET, "", (small.shape[1], small.shape[0]), 0.6, 0.3, 500)
+        _, faces = det.detect(small)
+        if faces is None or len(faces) == 0:
+            return None
+        x, y, w, h = faces[0][:4]
+        return int((y + h) / scale * (H / float(img.shape[0])))
+    except Exception:
+        return None
 
 MOODS = {
     "studio_haze": "a dark studio filled with soft haze, slow drifting warm light beams and faint floating "
@@ -248,8 +285,8 @@ def accent_color_from_image(image_path, fallback="#D97757"):
     return "#%02x%02x%02x" % (int(r * 255), int(g * 255), int(b * 255))
 
 
-def compose_headline(image_path, headline, out_path, center_pct=0.775, max_w_pct=0.86, max_h_pct=0.30,
-                     accent_color="auto"):
+def compose_headline(image_path, headline, out_path, center_pct=None, max_w_pct=0.78, max_h_pct=0.30,
+                     accent_color="auto", safe="organic", show_safe=False):
     """Compoe o titulo com Helvetica Neue Bold + Playfair Italic (enfase 1,55x), halo difuso,
     glow no serifado e degrade escuro no rodape, sobre a imagem 1080x1920.
     v2.12 (pedido 01/09): bloco CENTRADO em center_pct da altura (era ancorado no rodape) e a
@@ -260,12 +297,21 @@ def compose_headline(image_path, headline, out_path, center_pct=0.775, max_w_pct
     if base.size != (W, H):
         base = base.resize((W, H), Image.LANCZOS)
     runs = parse_headline(headline)
-    size, lines, sans, serif = layout(runs, int(W * max_w_pct), int(H * max_h_pct), cap["accent_ratio"], 150, 70)
+    zone = SAFE_ZONES.get(safe, SAFE_ZONES["organic"])
+    chin = chin_y(image_path)
+    band_top = max(zone["top"], (chin + int(0.02 * H)) if chin else int(0.58 * H))
+    band_bot = zone["bottom"] - int(0.012 * H)
+    band_h = band_bot - band_top
+    if band_h < int(0.12 * H):                       # rosto muito baixo: abre mao de nao cobrir o queixo
+        band_top = max(zone["top"], band_bot - int(0.30 * H))
+        band_h = band_bot - band_top
+    max_w = min(int(W * max_w_pct), zone["right"] - zone["left"] - 2 * int(0.02 * W))
+    size, lines, sans, serif = layout(runs, max_w, min(int(H * max_h_pct), band_h), cap["accent_ratio"], 150, 60)
 
     # degrade escuro no rodape (cinema): transparente em 52% -> 78% preto na base
     grad = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     gd = ImageDraw.Draw(grad)
-    y0 = int(H * 0.52)
+    y0 = max(int(H * 0.40), band_top - int(0.10 * H))
     for y in range(y0, H):
         a = int(200 * ((y - y0) / float(H - y0)) ** 1.4)
         gd.line([(0, y), (W, y)], fill=(0, 0, 0, a))
@@ -275,7 +321,10 @@ def compose_headline(image_path, headline, out_path, center_pct=0.775, max_w_pct
     metrics = [_measure(l, sans, serif) for l in lines]
     line_h = [int((m[1] + m[2]) * 1.02) for m in metrics]
     block_h = sum(line_h)
+    if center_pct is None:                            # centro da faixa util (queixo -> limite da UI)
+        center_pct = (band_top + band_bot) / 2.0 / H
     y = int(H * center_pct) - block_h // 2
+    y = max(band_top, min(y, band_bot - block_h))      # nunca embaixo da UI do Reels
     color = tuple(int(cap["color"].lstrip("#")[i:i + 2], 16) for i in (0, 2, 4))
     if accent_color == "auto":
         accent_color = accent_color_from_image(image_path)
@@ -313,8 +362,24 @@ def compose_headline(image_path, headline, out_path, center_pct=0.775, max_w_pct
     base.alpha_composite(glow)
     base.alpha_composite(text)
     base.convert("RGB").save(out_path, "PNG")
+    if show_safe:                                     # preview com as zonas da UI do Reels
+        ov = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        od = ImageDraw.Draw(ov)
+        od.rectangle([0, 0, W, zone["top"]], fill=(255, 40, 40, 90))
+        od.rectangle([0, zone["bottom"], W, H], fill=(255, 40, 40, 90))
+        od.rectangle([zone["right"], zone["top"], W, zone["bottom"]], fill=(255, 40, 40, 70))
+        od.rectangle([0, zone["top"], zone["left"], zone["bottom"]], fill=(255, 40, 40, 70))
+        od.rectangle([0, 285, W, 1635], outline=(80, 200, 255, 220), width=4)     # grade 4:5
+        if chin:
+            od.line([(0, chin), (W, chin)], fill=(255, 230, 80, 220), width=3)
+        od.line([(0, band_top), (W, band_top)], fill=(120, 255, 120, 220), width=3)
+        od.line([(0, band_bot), (W, band_bot)], fill=(120, 255, 120, 220), width=3)
+        prev = base.copy(); prev.alpha_composite(ov)
+        prev.convert("RGB").save(os.path.splitext(out_path)[0] + ".zonas.png", "PNG")
     return {"font_size": size, "lines": [" ".join(w for w, _ in l) for l in lines],
-            "center_pct": center_pct, "accent_color": accent_color}
+            "center_pct": round(center_pct, 4), "accent_color": accent_color, "safe": safe,
+            "band_px": [band_top, band_bot], "chin_px": chin,
+            "block_px": [y - sum(line_h), y]}
 
 
 def fit_vertical(src, dest, w=W, h=H):
@@ -342,7 +407,11 @@ def main():
     ap.add_argument("--no-logo", action="store_true")
     ap.add_argument("--mood", default="studio_haze", help="cenario do cinema: %s ou texto livre" % ", ".join(MOODS))
     ap.add_argument("--text-only", action="store_true", help="so compor a tipografia sobre --ref")
-    ap.add_argument("--text-center", type=float, default=0.775, help="centro vertical do bloco de titulo (fracao da altura)")
+    ap.add_argument("--text-center", type=float, default=None,
+                    help="centro vertical do bloco (fracao da altura); padrao = centro da faixa util entre o queixo e a UI do Reels")
+    ap.add_argument("--safe", default="organic", choices=["organic", "ads", "none"],
+                    help="zonas da UI do Reels que o titulo nunca invade (organic: rodape 420 px + grade 1:1; ads: guia da Meta 35%%)")
+    ap.add_argument("--show-safe", action="store_true", help="grava tambem <out>.zonas.png com as zonas desenhadas")
     ap.add_argument("--accent-color", default="auto", help="cor da enfase serifada: auto (cor do logo na imagem), #hex ou none")
     ap.add_argument("--keep-raw", default=None, help="salvar tambem a imagem sem texto neste caminho")
     ap.add_argument("--out", required=True)
@@ -358,7 +427,8 @@ def main():
         if not args.ref or not args.headline:
             raise SystemExit("--text-only precisa de --ref (imagem) e --headline")
         acc = None if str(args.accent_color).lower() == "none" else args.accent_color
-        info = compose_headline(args.ref, args.headline, args.out, center_pct=args.text_center, accent_color=acc)
+        info = compose_headline(args.ref, args.headline, args.out, center_pct=args.text_center, accent_color=acc,
+                                safe=args.safe, show_safe=args.show_safe)
         meta.update({"base_image": args.ref, "typography": info})
         json.dump(meta, open(os.path.splitext(args.out)[0] + ".capa.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
         log("tipografia composta sobre %s -> %s (corpo %d px, %d linha(s))" % (args.ref, args.out, info["font_size"], len(info["lines"])))
@@ -428,7 +498,8 @@ def main():
         shutil.copyfile(fitted, args.keep_raw)
     if args.style == "cinema" and args.headline:
         acc = None if str(args.accent_color).lower() == "none" else args.accent_color
-        info = compose_headline(fitted, args.headline, args.out, center_pct=args.text_center, accent_color=acc)
+        info = compose_headline(fitted, args.headline, args.out, center_pct=args.text_center, accent_color=acc,
+                                safe=args.safe, show_safe=args.show_safe)
         meta["typography"] = info
     else:
         shutil.copyfile(fitted, args.out)

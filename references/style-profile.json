@@ -1,6 +1,6 @@
 {
  "profile_name": "EditClean",
- "profile_version": "2.12.0",
+ "profile_version": "2.13.0",
  "derived_from": "ANALISE_TECNICA_EDICAO_VIDEO_REFERENCIA.md + medicao direta de 294 frames de 'Edit Pro/Video referencia.mp4' + preferencias do usuario (ver user_overrides)",
  "reference_material": {
   "duration_s": 152.2,
@@ -960,7 +960,9 @@
   "cover_cinema_calm": true,
   "cover_cinema_calm_note": "Pedido 01/09: capa 'mais cinematografica com a mesma fonte de legenda do video, estilo cinema mesmo, e nao quero cara de bravo na pessoa'. Tipografia composta com as fontes da legenda; imagem gerada sem texto; expressao calma.",
   "cover_title_center_accent_logo_color": true,
-  "cover_title_center_accent_logo_color_note": "Pedido 01/09 (depois de aprovar a capa cinema): 'texto mais bem posicionado, mais no centro, e o Fable 5.1 laranja na mesma cor do logo'."
+  "cover_title_center_accent_logo_color_note": "Pedido 01/09 (depois de aprovar a capa cinema): 'texto mais bem posicionado, mais no centro, e o Fable 5.1 laranja na mesma cor do logo'.",
+  "cover_title_inside_reels_safe_zone": true,
+  "cover_title_inside_reels_safe_zone_note": "Pedido 01/09: 'ta muito pra baixo; pesquise os ranges das coisas no Reels; o texto nunca deve ficar embaixo dessas coisas'. Titulo sempre acima de y=1500 (rodape + grade 1:1) e abaixo do queixo."
  },
  "parts_concat": {
   "enabled_default": true,
@@ -1160,9 +1162,58 @@
     "halo": "preto blur 0.22*corpo a 62%",
     "accent_glow": "branco blur 0.06*corpo a 55%",
     "bottom_gradient": "0.52H -> base, ate 78% preto",
-    "fit": "70-150 px, <=3 linhas, 86% largura, bloco CENTRADO em 0.775H",
+    "fit": "60-150 px, <=3 linhas, <=78% largura, dentro da faixa util do Reels (ver reels_safe)",
     "accent_color": "auto = cor do logo lida da imagem (fallback #D97757); glow da mesma cor 60%"
    }
+  },
+  "reels_safe": {
+   "canvas": [
+    1080,
+    1920
+   ],
+   "organic": {
+    "top_ui_px": 220,
+    "bottom_ui_px": 420,
+    "right_icons_px": 120,
+    "left_px": 60
+   },
+   "ads_meta": {
+    "top_pct": 0.14,
+    "bottom_pct": 0.35,
+    "sides_pct": 0.06
+   },
+   "profile_grid": {
+    "4:5": [
+     285,
+     1635
+    ],
+    "1:1": [
+     420,
+     1500
+    ]
+   },
+   "title_band": "do queixo (YuNet) + 2% ate min(1920-420, 1500) - 1.2%; largura <= 78%, x em 120-960; bloco centrado na faixa",
+   "measured_fable51": {
+    "chin_px": 912,
+    "band_px": [
+     950,
+     1477
+    ],
+    "block_px": [
+     954,
+     1473
+    ],
+    "font_px": 114,
+    "center_pct": 0.632
+   },
+   "sources": [
+    "outfy.com/blog/instagram-safe-zone",
+    "zeely.ai/blog/master-instagram-safe-zones",
+    "getkoro.app/blog/instagram-reels-dimensions",
+    "jwtoolbox.com/blog/instagram-reel-cover-size-cheat-sheet-2026",
+    "behaviour.digital (Meta 14/35/6)"
+   ],
+   "researched_at": "2026-09-01"
   }
  }
 }
