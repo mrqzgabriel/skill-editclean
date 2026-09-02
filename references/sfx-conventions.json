@@ -1,0 +1,486 @@
+{
+ "_researched_at": "2026-09-01",
+ "_source": "workflow sfx-research (WebSearch/WebFetch, 3 agentes)",
+ "conventions": {
+  "summary": "Regras de SFX para o Reels de 63 s (voz em -14 LUFS), consolidadas de guias de sound design para motion graphics e edição de vídeo. Princípios que valem para todos os momentos: (1) Voz é rei: nenhum SFX fica mais alto que a voz; whooshes ficam 12 a 18 dB abaixo da voz (\"sentidos mais que ouvidos\"), hits/pops 6 a 12 dB abaixo, shimmer e caudas 18 a 24 dB abaixo. Com a voz em -14 LUFS isso dá, no medidor momentâneo, whoosh por volta de -28 LUFS-M, hit -22 a -24, shimmer -34. (2) Timing: o corpo do whoosh começa ANTES do movimento (20 a 80 ms) e seu pico/fim cai no frame em que o elemento chega; transientes (hit, pop, click, thump) caem no frame exato da chegada ou do corte. Se errar, erre 1 frame DEPOIS (som antes da imagem é percebido como erro; até 2 frames depois passa). Em 30 fps, 1 frame = 33 ms. (3) Escala: som do tamanho do movimento. Logo subindo com overshoot = whoosh curto + hit macio; imagem que desliza 0,35 s = swipe curto + pop; punch-in de +12% = thump pequeno ou nada; troca seca = tick, nunca whoosh (não há trajeto). (4) Direção: o pitch acompanha o vetor: subir = sweep ascendente; descer = descendente. Reels toca em mono no celular: sem pan, e sub grave puro some (colocar um pouco de corpo em 80 a 200 Hz + transiente médio para o som existir no alto-falante do celular). (5) Densidade: com abertura, logo in/out, N imagens (in/out/troca), 3 punch-ins e fade final, o vídeo já tem ~8 + 2N eventos em 63 s; a regra \"um efeito a cada 4 s cansa\" está no limite. Por isso: saídas de imagem em silêncio ou quase, punch-ins muito baixos (ou silenciosos), nunca SFX em jump cuts comuns, e nunca repetir o mesmo arquivo (alternar famílias, variar pitch/nível). (6) Espectro: tirar dos SFX a faixa 300 Hz a 3 kHz onde mora a inteligibilidade da voz; whoosh/shimmer nos agudos, hit no grave-médio. (7) Finalização: depois de somar os SFX, reconferir -14 LUFS integrado e true peak -1 dBTP. Fontes principais: Pixflow, Cinematic Whoosh SFX for Transitions (https://pixflow.net/blog/cinematic-whoosh-sound-effects/): whoosh 10 a 20 ms antes do movimento, duração cobre o movimento (400 a 500 ms para 0,5 s), whoosh -12 a -18 dB rel. diálogo, impacto no fim como ponto de pouso, não repetir o mesmo whoosh. Pixflow, Enhancing motion graphics with cinematic transition sounds (https://pixflow.net/blog/enhancing-motion-graphics-with-cinematic-transition-sounds/): alinhar a parte mais forte do som com o keyframe onde a animação termina; whoosh + hit em camadas; logo/título = impacto. Morphic, Transition sound effects (https://morphic.com/resources/sounds/transition-sound-effects): começar antes do corte com pico no primeiro frame do novo plano; \"transição colocada inteira depois do corte sempre parece atrasada\"; hit quando precisa de peso, silêncio quando precisa de ar. MixClap (https://www.mixclap.com/en/blog/transition-sound-effects): efeito termina no corte; \"um efeito a cada 4 s cansa\"; \"o mesmo whoosh 10 vezes fica invisível, alternar famílias\"; sub só aparece no fone. YouTubeSFX (https://youtubesfx.com/free-sfx-pack/): whoosh -18 a -24 dB, hits -12 a -18 dB, riser nos 2 a 3 s antes de uma revelação, hit em estatística/título que aparece. Pixflow, Mixing dialogue/music/SFX in Premiere (https://pixflow.net/blog/audio-mixing-premiere-pro/): SFX -12 a -18 dB e nunca acima do diálogo; -14 LUFS para YouTube; teto -1 dBTP. Complementares: FlexClip (1 a 2 frames depois do início da transição; não usar demais), SoundGrail (whoosh antes = antecipação, no corte = clareza; som constante cansa), SFX Engine UI (cliques/pops 50 a 150 ms, 300 a 600 Hz), Pixabay blog (UI abaixo de 1 s; \"a voz lidera; sentir o SFX no corte sem competir com a fala\"), Dissolve Audio e curso On Track (logo: whoosh no movimento, hit quando o logo pousa, sparkle nos agudos, cauda de reverb), media.io (riser curto + acento final ou silêncio; caudas curtas que não invadem o próximo corte; em cena com fala, ruído mais suave e menos médio), Derek Lieu (reverb-out: cortar na nota, fade para o clipe molhado o mais tarde possível, nivelar para não dar pico).",
+  "rules": [
+   {
+    "moment": "abertura_desfoque_resolve (0 a 700 ms)",
+    "sfx_type": "riser curto / reverse whoosh de ar (ruído filtrado subindo, opcional camada tonal suave)",
+    "offset_ms": 0,
+    "duration_ms": 700,
+    "level_db_rel_voice": -14,
+    "notes": "Começa no frame 1 (Reels não tem pré-rolo) e o PICO/FIM cai exatamente no frame em que o foco resolve (+700 ms): riser peaks on the reveal (media.io, YouTubeSFX). Faixa -12 a -18 dB rel. voz; se a pessoa já fala nos primeiros 500 ms, baixar para -18 ou usar só o thump. Cortar o ruído entre 300 Hz e 3 kHz para não brigar com a primeira palavra. NÃO: riser cinematográfico de 3 a 10 s (o movimento dura 0,7 s; som do tamanho do movimento), boom antes da pessoa falar, ou qualquer SFX que atrase a chegada da voz: o gancho do Reels é a voz, não o efeito."
+   },
+   {
+    "moment": "abertura_ponto_de_foco (frame em que o desfoque resolve)",
+    "sfx_type": "thump macio / impacto surdo pequeno (opcional)",
+    "offset_ms": 700,
+    "duration_ms": 150,
+    "level_db_rel_voice": -10,
+    "notes": "Transiente no frame exato da resolução (tolerância 0 a +33 ms; nunca antes). Corpo em 80 a 200 Hz + um pouco de transiente médio para existir no alto-falante do celular (sub puro só aparece no fone, MixClap). Faixa -8 a -12 dB rel. voz. NÃO: sub-boom de trailer, cauda de reverb longa por cima da primeira frase, ou riser + thump ambos altos (escolher um protagonista)."
+   },
+   {
+    "moment": "logo_entra_whoosh (logo sobe de baixo com overshoot, 660 ms)",
+    "sfx_type": "whoosh curto ascendente (pitch sobe acompanhando o movimento para cima)",
+    "offset_ms": -60,
+    "duration_ms": 450,
+    "level_db_rel_voice": -14,
+    "notes": "Começa 20 a 100 ms ANTES do primeiro frame de movimento (Pixflow: 10 a 20 ms para câmera; para objeto entrando rápido, um pouco mais) e o pico cai onde o logo cruza a posição final / ápice do overshoot (~+400 a +500 ms), decaindo até o assentamento. Duração cobre a maior parte do movimento, como o guia: movimento de 0,5 s pede whoosh de 400 a 500 ms. Faixa -12 a -18 dB rel. voz. Energia nos agudos (acima de 4 kHz) e leve corpo; carve em 300 Hz a 3 kHz. NÃO: whoosh de 1,5 a 3 s de filme (esse tamanho é para corte de cena, não para um logo de 0,66 s), começar no frame do movimento ou depois (fica atrasado), usar o mesmo arquivo na saída."
+   },
+   {
+    "moment": "logo_entra_hit (frame em que o logo pousa / ápice do overshoot)",
+    "sfx_type": "hit / thud curto com transiente (impacto macio, tipo 'logo lands')",
+    "offset_ms": 450,
+    "duration_ms": 250,
+    "level_db_rel_voice": -9,
+    "notes": "Regra dos guias de motion: alinhar a parte mais forte do som com o keyframe em que a animação completa o movimento (Pixflow) e 'adicionar um hit quando o logo pousa' (curso On Track, Dissolve Audio). Com overshoot, o pouso percebido é a PRIMEIRA chegada à posição final (~+400 a +500 ms dos 660); alternativa aceitável: no assentamento (+660). Tolerância 0 a +33 ms, nunca antes. Faixa -6 a -12 dB rel. voz; o hit dá o 'ponto de pouso' e não precisa ser alto (Pixflow: 'mesmo um transiente pequeno e bem colocado trava a edição'). Corpo 80 a 200 Hz + click médio. Cauda no máximo 300 ms para não invadir a fala. NÃO: boom cinematográfico, dois hits (ápice e assentamento), hit mais alto que a voz."
+   },
+   {
+    "moment": "logo_glow_shimmer (do pouso até o fim da espera de 1 s)",
+    "sfx_type": "shimmer / sparkle nos agudos (cauda brilhante curta, opcional)",
+    "offset_ms": 450,
+    "duration_ms": 800,
+    "level_db_rel_voice": -20,
+    "notes": "Camada de 'sparkle nos registros altos' que os designers de logo usam junto do glow (On Track, TunePocket). Começa junto do hit e decai durante a espera; precisa terminar ANTES do logo começar a sair (+1660 ms) para não somar com o whoosh de saída. Faixa -18 a -24 dB rel. voz, só acima de ~5 kHz. NÃO: shimmer alto ou com cauda de 2 a 3 s (som de vinheta de TV, pesado demais para um Reels de 63 s); se houver trilha com agudos, pular esta camada."
+   },
+   {
+    "moment": "logo_segura_1s",
+    "sfx_type": "nenhum (só a cauda do shimmer decaindo)",
+    "offset_ms": 0,
+    "duration_ms": 0,
+    "level_db_rel_voice": -99,
+    "notes": "Silêncio de SFX: a espera é o 'ar' entre a chegada e a saída. Nenhum novo evento aqui (MixClap: guardar efeitos para os momentos reais; SoundGrail: som constante cansa)."
+   },
+   {
+    "moment": "logo_sai_whoosh (logo sai para cima, 540 ms)",
+    "sfx_type": "swoosh curto e leve, ascendente, de outra família que o de entrada (ou o de entrada revertido/repitchado)",
+    "offset_ms": -50,
+    "duration_ms": 350,
+    "level_db_rel_voice": -17,
+    "notes": "Começa 30 a 80 ms antes do movimento e termina quando o logo deixa o quadro (~+540). Mais curto e 3 a 5 dB MAIS BAIXO que a entrada: saídas são sempre mais discretas que entradas. Faixa -15 a -20 dB rel. voz. SEM hit no fim: o logo não pousa, ele vai embora ('silêncio quando precisa de ar', Morphic). NÃO: repetir o mesmo arquivo da entrada ('o mesmo whoosh 10 vezes fica invisível, alternar famílias', MixClap), impacto na saída, cauda que cobra a próxima frase."
+   },
+   {
+    "moment": "imagem_entra_slide (vídeo desliza para baixo, rampa 350 ms)",
+    "sfx_type": "swipe / whoosh curto descendente (pitch desce com o vídeo)",
+    "offset_ms": -40,
+    "duration_ms": 300,
+    "level_db_rel_voice": -17,
+    "notes": "Começa 20 a 60 ms antes da rampa, pico no fim da rampa (+350). Duração ~ igual ao movimento (250 a 350 ms). Faixa -15 a -20 dB rel. voz (YouTubeSFX: whoosh 'sentido mais que ouvido'). Whoosh curto e leve é o que os guias mandam para 'elementos de interface e tipografia'; sweeps longos são para movimentos de câmera. NÃO: whoosh cinematográfico, usar o mesmo swipe idêntico em todas as imagens (variar pitch em ±1 semitom e nível em ±1 dB), colocar o swipe depois que o movimento já começou."
+   },
+   {
+    "moment": "imagem_entra_pop (frame em que a imagem chega a 100% de opacidade / rampa termina)",
+    "sfx_type": "pop / tick de UI (transiente curto, tipo 'lower third pop in')",
+    "offset_ms": 330,
+    "duration_ms": 80,
+    "level_db_rel_voice": -14,
+    "notes": "Transiente no frame de chegada (+300 a +350 ms; tolerância +33). Duração de UI: 50 a 150 ms (SFX Engine), 'abaixo de 1 s para UI' (Pixabay). Faixa -12 a -16 dB rel. voz. Pitch fora da faixa da voz ('breves, afinados para não mascarar vozes', Pixabay): pop em 300 a 600 Hz com clique agudo, ou só tick acima de 2 kHz. Usar a MESMA família de pop em todas as imagens (consistência = linguagem), com micro-variações. Se o momento for de dado/estatística importante, pode trocar o pop por um hit pequeno (-10 dB): 'impacto em uma estatística que aparece' (YouTubeSFX). NÃO: whoosh + pop + hit juntos; pop mais alto que a palavra que a pessoa está dizendo."
+   },
+   {
+    "moment": "imagem_sai_fade (fade 300 ms, vídeo volta)",
+    "sfx_type": "nada, ou reverse-swipe muito suave",
+    "offset_ms": -30,
+    "duration_ms": 250,
+    "level_db_rel_voice": -21,
+    "notes": "Preferência profissional: saída em fade é silenciosa ou quase (fade não é um movimento, é uma dissolução). Se usar, sweep curto e reverso, -18 a -24 dB rel. voz, começando 30 ms antes e terminando junto com o fim do fade. Isso também controla a densidade: com N imagens o vídeo já tem ~8 + 2N eventos em 63 s, e 'um efeito a cada 4 s cansa' (MixClap). NÃO: pop na saída (pop é chegada), hit, mesmo nível da entrada."
+   },
+   {
+    "moment": "troca_seca_entre_duas_imagens (corte direto)",
+    "sfx_type": "click / tick curto ou obturador de câmera (se forem prints/fotos)",
+    "offset_ms": 0,
+    "duration_ms": 60,
+    "level_db_rel_voice": -14,
+    "notes": "Transiente no frame do corte (tolerância 0 a +33 ms; FlexClip aceita 1 a 2 frames depois, nunca antes). Duração 30 a 120 ms. Faixa -12 a -16 dB rel. voz. Corte seco não tem trajeto, então o som é um 'estalo', não um whoosh (regra: whoosh = deslocamento; tick = troca instantânea). Obturador 'faz o corte parecer filmado, não editado' (YouTubeSFX) e cai bem em prints. NÃO: whoosh, hit pesado, cauda."
+   },
+   {
+    "moment": "punch_in (corte seco para +12% de zoom, 3 vezes)",
+    "sfx_type": "thump grave macio + click discreto (ou obturador), ou NENHUM SFX",
+    "offset_ms": 0,
+    "duration_ms": 150,
+    "level_db_rel_voice": -12,
+    "notes": "Transiente no frame exato do corte (tolerância 0 a +33 ms; nunca antes: 'hit cai frame-accurate na mudança visual'). Duração 80 a 200 ms, cauda máxima 300 ms. Faixa -10 a -14 dB rel. voz. 'Som do tamanho do movimento': +12% é um punch pequeno, então thump pequeno, com corpo em 60 a 150 Hz mais um clique médio para o celular ouvir (sub puro some). Manter a MESMA assinatura nos 3 punch-ins (é linguagem do vídeo), variando ±1 dB / ±1 semitom. Opção válida e muito usada em talking head: sem SFX, porque o punch-in cai numa ênfase vocal e qualquer som compete com a palavra enfatizada (RouteNote: 'swishes, clicks ou sons sutis' e só com cortes mínimos). NÃO: bass drop / boom estilo MrBeast (é para title card com trilha alta, não para +12% em fala), whoosh (não há deslocamento contínuo), SFX nos jump cuts comuns do vídeo, thump que mascara a palavra."
+   },
+   {
+    "moment": "fade_para_preto_final",
+    "sfx_type": "reverb-out / swell grave descendente (low-pass + cauda de reverb da trilha ou room tone), sem impacto",
+    "offset_ms": 0,
+    "duration_ms": 1200,
+    "level_db_rel_voice": -20,
+    "notes": "Começa junto com o início do fade (ou no fim da última palavra, o que vier primeiro); duração 800 a 1500 ms com cauda que pode passar 300 a 800 ms do preto total, decaindo a silêncio. Faixa -18 a -24 dB rel. voz, abaixo da última frase. Técnica: cortar a trilha/room tone na última nota ou palavra, aplicar reverb + low-pass (~1 kHz) na cópia, fazer o fade para o clipe molhado 'o mais tarde possível' e nivelar para não dar pico (Derek Lieu, PremiumBeat). 'Um swell que se apaga no ponto certo deixa a cena mais deliberada do que outro impacto' (Morphic). NÃO: hit/boom no preto, corte seco de áudio (Noble Desktop: 'o som entra e sai em fade, nunca abrupto'), cauda tão longa que empurre a duração do vídeo. Ao final, reconferir -14 LUFS integrado e -1 dBTP."
+   },
+   {
+    "moment": "regra_global_densidade_e_mix (vale para todos os momentos)",
+    "sfx_type": "política de uso",
+    "offset_ms": 0,
+    "duration_ms": 0,
+    "level_db_rel_voice": -12,
+    "notes": "Escala de níveis rel. voz: hits -6 a -12; pops/ticks/thumps -10 a -16; whooshes -12 a -18; shimmer/caudas -18 a -24. Nunca acima da voz (Pixflow: 'SFX nunca mais alto que o diálogo, a não ser em um momento grande e intencional'; aqui não há nenhum). Timing: whoosh começa antes e pousa no frame de chegada; transiente cai no frame; em dúvida, 1 frame depois, nunca antes. Um protagonista por momento (whoosh OU hit em destaque, o outro de apoio). Alternar famílias, nunca o mesmo arquivo em sequência. Limite de densidade: ~1 evento a cada 4 a 5 s já é o teto; priorizar abertura, logo, entradas de imagem e fim; saídas e punch-ins são os primeiros a virar silêncio se o vídeo ficar carregado. Carve de 300 Hz a 3 kHz nos SFX (voz), sem pan (Reels em mono no celular), sub sempre acompanhado de transiente médio."
+   }
+  ]
+ },
+ "mixkit_candidates": {
+  "items": [
+   {
+    "category": "whoosh_in",
+    "name": "Cinematic whoosh fast transition (Mixkit #1492)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/1492/1492.wav",
+    "page": "https://mixkit.co/free-sound-effects/whoosh/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Whoosh cinematico que cresce ate o pico (pico em 0,83 s), ideal para 'entrar' num corte. Som efetivo 0,97 s (arquivo 1,33 s, 0,26 s de silencio inicial). Verificado 200 audio/wav; mp3: /sfx/1492/1492-preview.mp3 (200 audio/mpeg)."
+   },
+   {
+    "category": "whoosh_in",
+    "name": "Fast air woosh (Mixkit #2607)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/2607/2607.wav",
+    "page": "https://mixkit.co/free-sound-effects/woosh/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Whoosh de ar rapido e limpo, pico em 0,39 s. Som efetivo 0,77 s (arquivo 1,73 s). Verificado 200 audio/wav."
+   },
+   {
+    "category": "whoosh_in",
+    "name": "Cinematic wind swoosh (Mixkit #1471)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/1471/1471.wav",
+    "page": "https://mixkit.co/free-sound-effects/swoosh/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Swoosh de vento cinematico, curto. Som efetivo 0,65 s (arquivo 1,45 s), pico -2,6 dBFS. Verificado 200 audio/wav."
+   },
+   {
+    "category": "whoosh_in",
+    "name": "Cinematic transition wind swoosh (Mixkit #1468)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/1468/1468.wav",
+    "page": "https://mixkit.co/free-sound-effects/swoosh/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Ataque na frente (pico em 0,14 s) e cauda curta: bom para alinhar o inicio do whoosh com o corte. Som efetivo 0,72 s (arquivo 1,32 s). Verificado 200 audio/wav."
+   },
+   {
+    "category": "whoosh_in",
+    "name": "Quick air woosh (Mixkit #2605)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/2605/2605.wav",
+    "page": "https://mixkit.co/free-sound-effects/woosh/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Whoosh de ar um pouco mais longo, comeca em 0,01 s (sem silencio inicial). Som efetivo 1,01 s (arquivo 1,51 s). Verificado 200 audio/wav."
+   },
+   {
+    "category": "whoosh_out",
+    "name": "Fast swipe zoom (Mixkit #2627)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/2627/2627.wav",
+    "page": "https://mixkit.co/free-sound-effects/woosh/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Swipe/zoom rapido, pico em 0,17 s e decai: sensacao de 'saida'. Som efetivo 0,45 s (arquivo 1,06 s). Verificado 200 audio/wav."
+   },
+   {
+    "category": "whoosh_out",
+    "name": "Air zoom vacuum (Mixkit #2608)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/2608/2608.wav",
+    "page": "https://mixkit.co/free-sound-effects/transition/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Efeito 'vacuo' (ar sendo sugado), muito curto: 0,31 s efetivo (arquivo 1,27 s, 0,22 s de silencio inicial). Bom whoosh de saida sem reverse. Verificado 200 audio/wav."
+   },
+   {
+    "category": "whoosh_out",
+    "name": "Fast air sweep transition (Mixkit #168)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/168/168.wav",
+    "page": "https://mixkit.co/free-sound-effects/sweep/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Sweep de ar rapido, arquivo inteiro 0,86 s (efetivo 0,57 s). Funciona invertido (reverse no ffmpeg: -af areverse) como whoosh_out. Verificado 200 audio/wav."
+   },
+   {
+    "category": "whoosh_out",
+    "name": "Fast small sweep transition (Mixkit #166)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/166/166.wav",
+    "page": "https://mixkit.co/free-sound-effects/transition/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Sweep pequeno e rapido, arquivo 0,78 s (efetivo 0,54 s), pico -0,1 dBFS (ja normalizado). Verificado 200 audio/wav."
+   },
+   {
+    "category": "whoosh_out",
+    "name": "UI zoom out (Mixkit #2619)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/2619/2619.wav",
+    "page": "https://mixkit.co/free-sound-effects/ui/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Zoom-out de interface, sintetico e discreto (pico -11,4 dBFS, talvez precise de +6 a +9 dB). Som efetivo 0,71 s (arquivo 1,15 s). Existe o par 'UI zoom in' #2617 (0,42 s). Verificado 200 audio/wav."
+   },
+   {
+    "category": "pop",
+    "name": "Dry pop up notification alert (Mixkit #2356)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/2356/2356.wav",
+    "page": "https://mixkit.co/free-sound-effects/pop/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Pop seco e suave de UI, o mais discreto do lote: 0,19 s efetivo (arquivo 0,30 s), pico -5 dBFS. Verificado 200 audio/wav."
+   },
+   {
+    "category": "pop",
+    "name": "Bubble pop up alert notification (Mixkit #2357)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/2357/2357.wav",
+    "page": "https://mixkit.co/free-sound-effects/pop/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Pop tipo bolha, redondo, bom para elementos aparecendo. 0,29 s efetivo (arquivo 0,38 s), pico -4,9 dBFS. Verificado 200 audio/wav."
+   },
+   {
+    "category": "pop",
+    "name": "Long pop (Mixkit #2358)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/2358/2358.wav",
+    "page": "https://mixkit.co/free-sound-effects/pop/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Pop um pouco mais cheio, 0,36 s efetivo (arquivo 0,48 s), pico -2,1 dBFS. Verificado 200 audio/wav."
+   },
+   {
+    "category": "pop",
+    "name": "Explainer video pops whoosh light pop (Mixkit #3005)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/3005/3005.wav",
+    "page": "https://mixkit.co/free-sound-effects/pop/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Pop leve feito para explainer/motion; arquivo inteiro 0,18 s (efetivo 0,15 s). Verificado 200 audio/wav."
+   },
+   {
+    "category": "pop",
+    "name": "Soap bubble sound (Mixkit #2925)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/2925/2925.wav",
+    "page": "https://mixkit.co/free-sound-effects/pop/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Estouro de bolha de sabao, organico. 0,19 s efetivo (arquivo 1,14 s com cauda silenciosa), pico -0,3 dBFS (alto, reduzir ganho). Verificado 200 audio/wav."
+   },
+   {
+    "category": "click",
+    "name": "Modern click box check (Mixkit #1120)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/1120/1120.wav",
+    "page": "https://mixkit.co/free-sound-effects/click/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Tick de checkbox moderno, bem sutil: 0,07 s efetivo (arquivo 0,24 s), pico -10 dBFS. Melhor candidato a 'tick'. Verificado 200 audio/wav."
+   },
+   {
+    "category": "click",
+    "name": "Cool interface click tone (Mixkit #2568)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/2568/2568.wav",
+    "page": "https://mixkit.co/free-sound-effects/click/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Click de interface com leve tom, 0,04 s efetivo (arquivo 0,20 s), pico -6,1 dBFS. Verificado 200 audio/wav."
+   },
+   {
+    "category": "click",
+    "name": "Modern technology select (Mixkit #3124)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/3124/3124.wav",
+    "page": "https://mixkit.co/free-sound-effects/click/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Select de tecnologia, seco e curtissimo: 0,03 s efetivo (arquivo 0,50 s), pico -4,8 dBFS. Verificado 200 audio/wav."
+   },
+   {
+    "category": "click",
+    "name": "Classic click (Mixkit #1117)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/1117/1117.wav",
+    "page": "https://mixkit.co/free-sound-effects/click/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Click classico, 0,08 s efetivo (arquivo 0,29 s), pico 0 dBFS (mais presente; reduzir uns 6-10 dB para ficar sutil). Verificado 200 audio/wav."
+   },
+   {
+    "category": "click",
+    "name": "Interface click hover (Mixkit #1127)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/1127/1127.wav",
+    "page": "https://mixkit.co/free-sound-effects/hover/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Hover de interface, o mais baixo de todos (pico -21,3 dBFS, 0,02 s efetivo, arquivo 0,38 s com 0,25 s de silencio inicial). Precisa de ganho, mas e o tick mais discreto. Verificado 200 audio/wav."
+   },
+   {
+    "category": "riser",
+    "name": "Cinematic trailer riser (Mixkit #790)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/790/790.wav",
+    "page": "https://mixkit.co/free-sound-effects/riser/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Unico item da tag 'riser' curto o bastante: som efetivo 1,52 s, mas o arquivo (2,57 s) tem 1,05 s de silencio no inicio; cortar com -ss 1.0. Pico -6,3 dBFS. Verificado 200 audio/wav."
+   },
+   {
+    "category": "riser",
+    "name": "Futuristic cinematic sweep (Mixkit #2635)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/2635/2635.wav",
+    "page": "https://mixkit.co/free-sound-effects/sweep/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Sweep cinematico que sobe, 1,12 s efetivo (arquivo 1,29 s), pico em 0,53 s. Encaixa direto na faixa 0,7-1,5 s sem corte. Verificado 200 audio/wav."
+   },
+   {
+    "category": "riser",
+    "name": "Futuristic robotic fast sweep (Mixkit #171)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/171/171.wav",
+    "page": "https://mixkit.co/free-sound-effects/sweep/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Riser sintetico curto, 0,75 s efetivo (arquivo 2,0 s com cauda), pico -4,7 dBFS. Verificado 200 audio/wav."
+   },
+   {
+    "category": "riser",
+    "name": "Cinematic whoosh stutter (Mixkit #787)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/787/787.wav",
+    "page": "https://mixkit.co/free-sound-effects/whoosh/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Riser tipo 'stutter' (gagueja e cresce ate o pico em 1,42 s). 1,91 s efetivo (arquivo 2,52 s, 0,4 s de silencio inicial); um pouco acima de 1,5 s, cortar o comeco se precisar. Verificado 200 audio/wav."
+   },
+   {
+    "category": "riser",
+    "name": "Sweeping sparkle presentation intro (Mixkit #2633)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/2633/2633.wav",
+    "page": "https://mixkit.co/free-sound-effects/sweep/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Riser brilhante (sweep + sparkle), mais 'clean/tech' que cinema pesado. 1,77 s efetivo (arquivo 3,0 s), pico em 0,85 s. Serve tambem como shimmer de entrada. Verificado 200 audio/wav."
+   },
+   {
+    "category": "impact",
+    "name": "Impact of a blow (Mixkit #2150)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/2150/2150.wav",
+    "page": "https://mixkit.co/free-sound-effects/impact/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Hit curto e seco, cauda pequena: 0,35 s efetivo (arquivo 0,59 s), pico -2,3 dBFS. Bom 'soft hit' para pontuar corte. Verificado 200 audio/wav."
+   },
+   {
+    "category": "impact",
+    "name": "Fast impact blow (Mixkit #2655)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/2655/2655.wav",
+    "page": "https://mixkit.co/free-sound-effects/impact/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Whoosh curto que termina num impacto (pico em 0,32 s): whoosh + hit num arquivo so. 0,63 s efetivo (arquivo 1,33 s). Verificado 200 audio/wav."
+   },
+   {
+    "category": "impact",
+    "name": "Quick zoom impact (Mixkit #772)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/772/772.wav",
+    "page": "https://mixkit.co/free-sound-effects/impact/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Impacto de 'zoom' cinematico, 0,59 s efetivo (arquivo 1,22 s), pico em 0,33 s. Otimo para punch-in de camera. Verificado 200 audio/wav."
+   },
+   {
+    "category": "impact",
+    "name": "Weak hit impact (Mixkit #2148)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/2148/2148.wav",
+    "page": "https://mixkit.co/free-sound-effects/hit/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "O hit mais suave do lote (pico -5,6 dBFS), 0,35 s efetivo (arquivo 0,59 s). Verificado 200 audio/wav."
+   },
+   {
+    "category": "impact",
+    "name": "Deep heartbeat impact (Mixkit #498)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/498/498.wav",
+    "page": "https://mixkit.co/free-sound-effects/impact/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Impacto grave cinematico com cauda (1,21 s efetivo, arquivo 3,47 s), ataque logo no inicio (0,06 s). Para momentos mais dramaticos. Verificado 200 audio/wav."
+   },
+   {
+    "category": "bass_hit",
+    "name": "Short bass hit (Mixkit #2299)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/2299/2299.wav",
+    "page": "https://mixkit.co/free-sound-effects/bass/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Bass hit curto, ataque em 0,03 s, 0,56 s efetivo (arquivo 1,10 s). Melhor 'sub thump' direto do Mixkit. Verificado 200 audio/wav."
+   },
+   {
+    "category": "bass_hit",
+    "name": "Human single heart beat (Mixkit #490)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/490/490.wav",
+    "page": "https://mixkit.co/free-sound-effects/boom/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Batida unica de coracao: thump grave e abafado, 0,41 s efetivo (arquivo 1,10 s). Passa muito bem como sub sutil por baixo de um corte. Verificado 200 audio/wav."
+   },
+   {
+    "category": "bass_hit",
+    "name": "Quick bass switch (Mixkit #2301)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/2301/2301.wav",
+    "page": "https://mixkit.co/free-sound-effects/bass/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Bass 'switch' cinematico e discreto (pico -10,4 dBFS), 0,42 s efetivo (arquivo 2,0 s). Sub sutil por natureza. Verificado 200 audio/wav."
+   },
+   {
+    "category": "bass_hit",
+    "name": "Futuristic bass hit (Mixkit #2303)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/2303/2303.wav",
+    "page": "https://mixkit.co/free-sound-effects/bass/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Bass hit com timbre mais sintetico, 0,97 s efetivo (arquivo 2,75 s), pico em 0,15 s. Verificado 200 audio/wav."
+   },
+   {
+    "category": "bass_hit",
+    "name": "Drum bass hit (Mixkit #2294)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/2294/2294.wav",
+    "page": "https://mixkit.co/free-sound-effects/drum/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Bumbo orquestral grave, 1,22 s efetivo (arquivo 1,53 s), ataque imediato. Mais 'trailer' que sub puro; usar low-pass se quiser so o thump. Verificado 200 audio/wav."
+   },
+   {
+    "category": "shimmer",
+    "name": "Fairy magic sparkle (Mixkit #871)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/871/871.wav",
+    "page": "https://mixkit.co/free-sound-effects/sparkle/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Sparkle curto e cristalino, 0,56 s efetivo (arquivo 1,30 s). Mixkit nao tem tag 'shimmer' (pagina retorna 'No results'); sparkle/magic/glow sao o equivalente. Verificado 200 audio/wav."
+   },
+   {
+    "category": "shimmer",
+    "name": "Fairy arcade sparkle (Mixkit #866)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/866/866.wav",
+    "page": "https://mixkit.co/free-sound-effects/sparkle/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Sparkle com toque arcade/8-bit, 0,66 s efetivo (arquivo 1,50 s), comeca em 0 s. Verificado 200 audio/wav."
+   },
+   {
+    "category": "shimmer",
+    "name": "Magic wand sparkle (Mixkit #3062)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/3062/3062.wav",
+    "page": "https://mixkit.co/free-sound-effects/sparkle/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Sparkle de varinha, 0,78 s efetivo (arquivo 2,50 s), pico -4,1 dBFS. Bom para destacar texto/logo. Verificado 200 audio/wav."
+   },
+   {
+    "category": "shimmer",
+    "name": "Magic sparkle touch (Mixkit #3083)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/3083/3083.wav",
+    "page": "https://mixkit.co/free-sound-effects/sparkle/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Sparkle 'touch', um pouco mais longo e suave: 1,20 s efetivo (arquivo 2,33 s). Verificado 200 audio/wav."
+   },
+   {
+    "category": "shimmer",
+    "name": "Sparkling fairy glow (Mixkit #870)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/870/870.wav",
+    "page": "https://mixkit.co/free-sound-effects/glow/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Glow continuo brilhante (2,02 s efetivo, arquivo 3,97 s), pico -5,5 dBFS. Para 'brilho' sustentado em vez de um sparkle pontual. Verificado 200 audio/wav."
+   },
+   {
+    "category": "slide",
+    "name": "Paper slide (Mixkit #1530)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/1530/1530.wav",
+    "page": "https://mixkit.co/free-sound-effects/slide/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Deslize de papel, organico e curto: 0,38 s efetivo (arquivo 1,09 s). Bom para cartao/legenda entrando. Verificado 200 audio/wav."
+   },
+   {
+    "category": "slide",
+    "name": "Technology transition slide (Mixkit #3120)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/3120/3120.wav",
+    "page": "https://mixkit.co/free-sound-effects/slide/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Slide tech para transicao de UI, discreto (pico -10,8 dBFS), 0,47 s efetivo (arquivo 1,65 s). Verificado 200 audio/wav."
+   },
+   {
+    "category": "slide",
+    "name": "Futuristic slide (Mixkit #1533)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/1533/1533.wav",
+    "page": "https://mixkit.co/free-sound-effects/slide/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Slide futurista, arquivo inteiro 0,64 s (efetivo 0,50 s), pico -5,4 dBFS. Verificado 200 audio/wav."
+   },
+   {
+    "category": "slide",
+    "name": "Warping slide (Mixkit #1531)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/1531/1531.wav",
+    "page": "https://mixkit.co/free-sound-effects/slide/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Slide com 'warp' (pitch deslizando), 0,69 s efetivo (arquivo 2,0 s), pico -3,7 dBFS. Verificado 200 audio/wav."
+   },
+   {
+    "category": "slide",
+    "name": "Glass plate slide (Mixkit #1527)",
+    "url": "https://assets.mixkit.co/active_storage/sfx/1527/1527.wav",
+    "page": "https://mixkit.co/free-sound-effects/slide/",
+    "license": "Mixkit License (free, commercial ok, no attribution)",
+    "why": "Deslize de vidro, suave e baixo (pico -11 dBFS), 0,65 s efetivo (arquivo 1,13 s). Verificado 200 audio/wav."
+   }
+  ],
+  "notes": "Metodo: baixei o HTML bruto de 37 paginas de tag do Mixkit (whoosh, swoosh, woosh, pop, click, transition, cinematic, riser, impact, bass, sparkle, slide, sweep, hit, boom, drum, magic, ui, hover, glow etc.; 'shimmer', 'thump' e 'twinkle' nao existem como tag) e extrai 482 sons unicos pelo atributo data-audio-player-preview-url-value. WebFetch nao serve para isso: a conversao para markdown descarta as URLs de audio.\n\nURLs: o botao 'Download Free SFX' do site aponta para o WAV original em https://assets.mixkit.co/active_storage/sfx/<id>/<id>.wav (sem login, sem cookie). Usei o WAV como url principal em todos os 45 itens acima; cada um foi verificado com curl -sI (HTTP/2 200, content-type audio/wav) e baixado de fato. O preview MP3 equivalente https://assets.mixkit.co/active_storage/sfx/<id>/<id>-preview.mp3 tambem responde 200 audio/mpeg para todos os 86 candidatos testados. Quatro sons (2354 Message pop alert, 1144 Short space stutter intro riser, 1143 Cinematic whoosh deep impact, 2158 Quick saber cut) retornam 403 no .wav; para eles so o -preview.mp3 funciona, por isso ficaram fora da lista final.\n\nDuracoes: o site arredonda tudo para '0:01'/'0:02'. Medi o arquivo real (afconvert -> WAV mono 44,1 kHz + envelope RMS em janelas de 10 ms, limiar -40 dBFS). 'efetivo' = trecho com som; 'arquivo' = duracao total incluindo silencio. Varios arquivos tem silencio inicial (ex.: riser #790 tem 1,05 s antes do som) e caudas silenciosas; para sincronizar no corte, use -ss no valor de inicio informado ou o filtro silenceremove do ffmpeg. Picos em dBFS indicam quanto ajustar o ganho (clicks/slides sutis estao em -10 a -21 dBFS; pops e whooshes em ~0 a -5 dBFS).\n\nLicenca (texto oficial em https://mixkit.co/license/modal/sfxFree/): 'Items under the Mixkit Sound Effects Free License can be used in your commercial and non-commercial projects for free. You're permitted to download, copy, modify, distribute and publicly perform the Sound Effect Items on any web or social media platform, in podcasts and in video games, as well as in films and presentations...'. Nao exige atribuicao. Restricoes: nao redistribuir o item sozinho como stock/template/source file, nao reivindicar autoria nem registrar em sistemas de gerenciamento de direitos (Content ID etc.). Todos os 45 itens sao SFX Free (nao ha SFX 'restricted' no Mixkit).\n\nArquivos baixados e tabela completa (items.json, verify.json com todas as medicoes) ficaram em /private/tmp/claude-501/-Users-gabriel/f692aaba-3fd0-4bad-a571-3f3fb2af4556/scratchpad/mixkit/ (WAV/MP3 dos 86 candidatos em dl/)."
+ }
+}

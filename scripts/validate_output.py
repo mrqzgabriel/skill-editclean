@@ -333,14 +333,26 @@ def validate(video, plan=None, frames_dir=None):
                                 % (b.get("id"), y1, h))
             if y0 < h * 0.02:
                 problems.append("bloco %s acima do topo seguro" % b.get("id"))
-            # estimativa de largura: 0.52*fsize por caractere e um limite grosseiro
+            # v3.0: largura MEDIDA com as fontes reais (TextMeasure do build_plan, com o
+            # accent_size_ratio) -- a estimativa por caractere dava falso positivo em todo bloco
+            # com palavra serifada. Cai na estimativa so se o build_plan nao importar.
+            bfs = int(b.get("font_size_px") or fsize)
             for ln in range(n_lines):
-                chars = sum(len(w["text"]) + 1 for w in b.get("words", [])
-                            if int(w.get("line", 0)) == ln)
-                est_w = chars * fsize * 0.52
-                if est_w > w * max_w_pct * 1.25:
-                    problems.append("bloco %s linha %d provavelmente larga demais (~%.0fpx de %d)"
-                                    % (b.get("id"), ln, est_w, w))
+                items = [(wd.get("style", "normal"), wd["text"]) for wd in b.get("words", [])
+                         if int(wd.get("line", 0)) == ln]
+                if not items:
+                    continue
+                if _MEAS is not None:
+                    est_w = _MEAS.width(items, bfs)
+                    limit = w * float(_PROF.get("captions", {}).get("layout", {}).get("max_width_pct_of_canvas", 0.82)) * 1.06
+                    how = "medida"
+                else:
+                    est_w = sum(len(t) + 1 for _, t in items) * bfs * 0.52
+                    limit = w * max_w_pct * 1.25
+                    how = "estimada"
+                if est_w > limit:
+                    problems.append("bloco %s linha %d larga demais (%s: %.0fpx, limite %.0fpx)"
+                                    % (b.get("id"), ln, how, est_w, limit))
         if problems:
             rep.warn("legendas_dentro_do_canvas", "; ".join(problems[:6]))
         else:
@@ -348,6 +360,23 @@ def validate(video, plan=None, frames_dir=None):
                    "%d bloco(s) dentro da area segura" % len(caps.get("blocks", [])))
 
     return rep, info
+
+
+_MEAS, _PROF = None, {}
+
+
+def _init_measure(plan):
+    """TextMeasure do build_plan com o perfil e o canvas do plano (fontes reais)."""
+    global _MEAS, _PROF
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import build_plan as bp
+        _PROF = json.load(open(bp.PROFILE_PATH, encoding="utf-8"))
+        W = int(plan["output"]["width"]); H = int(plan["output"]["height"])
+        _MEAS = bp.TextMeasure(_PROF, W, H)
+    except Exception as e:  # pragma: no cover
+        sys.stderr.write("[validate] medidor de fontes indisponivel (%s); usando estimativa\n" % e)
+        _MEAS = None
 
 
 def main():
@@ -367,6 +396,8 @@ def main():
         with open(args.plan, encoding="utf-8") as fh:
             plan = json.load(fh)
 
+    if plan:
+        _init_measure(plan)
     rep, info = validate(os.path.abspath(args.video), plan, args.frames_dir)
 
     result = {

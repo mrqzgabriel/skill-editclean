@@ -268,6 +268,29 @@ O mesmo `subject.json` define até onde uma inserção no topo pode descer
 Só use âncora diferente se o usuário pedir, ou se uma **inserção gráfica** ocupar a mesma faixa
 naquele instante (aí a legenda sai da frente).
 
+### Blocos fecham no ponto **[v2.15, 01/09/2026 — Fable 5.1 "25% mais barato"]**
+
+O agrupador quebrava só por pausa de fala e por contagem (3–7 palavras), ignorando a pontuação
+da transcrição — e colava o fim de uma frase com a primeira palavra da seguinte ("sem mudar o
+preço **A**", "gastando menos **O**", "de marketing Valeu por ficar"). Agora `normalize_tokens`
+guarda `sent_end` (`. ! ?`) e `clause_end` (`, ; :`) antes de tirar a pontuação, e
+`group_blocks`:
+
+- **quebra sempre em fim de frase** dentro da mesma pausa;
+- ao repartir uma frase longa por contagem, **prefere cortar logo depois de uma vírgula** (até 2
+  tokens antes do corte, ou 1 depois se ainda couber em 7);
+- rabo curto (< 3 palavras) só é juntado ao bloco anterior se continuar cabendo em 7 — senão
+  fica como bloco próprio ("gastando menos.").
+
+E quando um bloco **não cabe em 2 linhas** no corpo mínimo, a divisão deixou de ser "metade da
+contagem": escolhe o corte que **equilibra as larguras medidas** dos dois lados (mínimo 2 palavras
+por lado quando há 4+), com bônus para vírgula. Antes isso gerava blocos de uma palavra
+("programando", "de").
+
+Ênfase serifada em palavra muito longa ("cibersegurança", 14 letras) não cabe na largura útil
+mesmo no corpo mínimo (1,55× de 92 px) e força a divisão — prefira enfatizar uma vizinha mais
+curta ("verificados").
+
 ### Pausas
 Intervalos sem legenda entre blocos fazem parte do estilo, mas **não force**: quando a fala é
 contínua, a troca é seca (substituição), sem pausa artificial.
@@ -668,3 +691,60 @@ zonas para conferir. Se o rosto estiver tão baixo que sobrem < 12% de altura, o
 cobrir o queixo (registrar). Fontes: outfy.com/blog/instagram-safe-zone, zeely.ai/blog/master-
 instagram-safe-zones, getkoro.app/blog/instagram-reels-dimensions, jwtoolbox.com (cover cheat
 sheet 2026), behaviour.digital (Meta 14/35/6).
+
+## 20. Sound design **[v2.16, pedido do Gabriel 01/09/2026]**
+
+Pesquisa (guias de sound design para motion graphics, consolidada em `sfx-conventions.json`):
+voz é rei — hits −6…−12 dB abaixo, pops/thumps −10…−16, whooshes −12…−18 ("sentidos mais que
+ouvidos"), shimmer/caudas −18…−24. **Whoosh antecede o movimento** (20–80 ms; o crescente pode
+começar antes) e o pico/fim cai no frame de chegada; **pop, click e hit caem no frame do evento**
+(tolerância 0…+33 ms, nunca antes). Logo reveal profissional = whoosh → hit de pouso → sparkle;
+a espera do logo é silêncio de SFX; a saída usa outra família (sweep curto). Fade de saída de
+imagem é silencioso; o que soa é o **movimento** (o vídeo descendo/voltando). Jump cuts comuns
+não recebem SFX (densidade: um evento "grande" a cada poucos segundos). Fade final: nada.
+
+Implementação em `scripts/sfx_mix.py` (eventos derivados do plano; `assets/sfx/manifest.json`
+com origem/licença Mixkit e ganho por categoria; sidechain leve pela voz; `-c:v copy`;
+`-map_chapters -1`). Escolha de arquivo por **perfil acústico** (duração útil, instante do pico,
+centro de massa da energia, cauda, bandas grave/média/aguda), não pelo nome.
+
+## 21. Transcrição guiada pela cópia e legenda com dígitos **[v3.0, 01/09/2026]**
+
+`scripts/fix_transcript.py` substitui a correção manual de `words.json`: junções numéricas
+(`5`+`.1`, `50`+`%`), pares e grafias de `references/transcript-fixes.json` ("Antropi que" →
+Anthropic, "cash" → cache, "mito" → Mythos, "toque em" → token) e, quando o vídeo veio do
+influencIA, as **cópias como verdade** (`project_meta.json`): palavra fora do vocabulário das
+cópias e parecida (≥ 0,80) com uma delas vira a grafia da cópia ("Antropt" → Anthropic);
+"para" vira "pra" se as cópias só usam "pra"; a primeira palavra de cada parte (não funcional)
+fecha a frase anterior com ponto. Acento NUNCA vem da cópia ("é" ≠ "e"). Tempos: palavra
+esticada para dentro de silêncio medido encolhe; inícios a < 0,10 s são reespaçados (o
+`sanitize_times` atrasaria a palavra seguinte).
+
+Dinheiro na legenda em dígitos (pedido do Gabriel: *"no texto mesmo pode colocar US$, 4,23"*):
+`build_plan.normalize_tokens` junta `N dólares [e NN]` e `N e NN dólares` em `US$ N,NN` com o
+tempo dos tokens somados. A voz continua dizendo por extenso; só a legenda muda.
+
+## 22. Vídeo em trechos: backups na mesma pasta **[v3.0, medido]**
+
+`influencia_fix_part.py fix` guarda a parte antiga como `parteN_v1_<tag>.mp4` na MESMA pasta e o
+`concat_parts.py --pattern parte*.mp4` a pegava: o master do "25% mais barato" saiu com 12 partes
+e trechos duplicados. Agora o `concat_parts` ignora `_vN`/`_bak`/`_old` (a menos que
+`--include-backups`) e aborta se dois arquivos têm o mesmo número.
+
+## 23. Pipeline por estágios **[v3.0]**
+
+`scripts/pipeline.py --work DIR prep|draft|render|assets|deliver` lê `job.json` (nome, partes,
+overrides, cópias, inserções por âncora, ênfases, capa, SFX) e encadeia os scripts na ordem
+aprovada. Regenerou uma parte → `prep` de novo (as âncoras recalculam os tempos) → `render`.
+O Claude continua olhando entre os estágios: blocos impressos no `prep`, frames do `draft`,
+capas do `assets`. `deliver` só promove um `.partial` com `validation.json` aprovado.
+
+## 24. Prints reais via Playwright **[v3.0, quando o Apify estoura]**
+
+`scripts/shot_page.py` usa o Playwright de um projeto local (`playwright_dir` no
+`.credentials.json`) com o Chrome do sistema: rola a página inteira (conteúdo que só aparece
+no scroll), captura **por elemento** cada `<figure>/<table>/<svg>` (recorte do fullPage
+desloca em página longa) e aceita cookies. Tabela de docs: `--width 760 --dpr 3` (layout
+mobile, sem sidebar) deixa o texto ~35% maior na caixa do push-down; CSS zoom extrapola a
+viewport e sai cortado. Os prints são das páginas oficiais da empresa citada — real, sem
+mockup, e a origem vai no relatório.

@@ -85,11 +85,68 @@ def normalize_tokens(words):
         toks.append({"text": txt, "start": float(cur["start"]), "end": float(cur["end"])})
         i += 1
 
+    # v2.17 (Gabriel 01/09): dinheiro na LEGENDA em digitos -- a voz fala "dez dolares" /
+    # "quatro dolares e cinquenta e tres", a legenda mostra "US$ 10" / "US$ 4,53"
+    money = {"dolares": "US$", "dolar": "US$", "reais": "R$", "real": "R$", "euros": "€"}
+    def _num(x):
+        return re.fullmatch(r"\d+", x.rstrip(".,;:!?"))
+    merged, i = [], 0
+    last_sym, last_money_at = None, -99
+    while i < len(toks):
+        t = toks[i]; txt = t["text"].strip()
+        nxt = toks[i + 1]["text"].strip() if i + 1 < len(toks) else ""
+        key = _strip_accents(nxt.rstrip(".,;:!?").lower())
+        # moeda implicita: "custou 4 dolares e 53, contra 5 e 41" -> o segundo valor tambem e US$
+        if (_num(txt) and nxt.lower() == "e" and i + 2 < len(toks) and last_sym and len(merged) - last_money_at <= 10
+                and re.fullmatch(r"\d{2}[.,;:!?]*", toks[i + 2]["text"].strip())
+                and not (i + 3 < len(toks) and _strip_accents(toks[i + 3]["text"].strip().rstrip(".,;:!?").lower()) in money)):
+            cents = toks[i + 2]["text"].strip(); pc = cents[len(cents.rstrip(".,;:!?")):]
+            merged.append({"text": "%s %s,%s%s" % (last_sym, txt.rstrip(".,"), cents.rstrip(".,;:!?"), pc),
+                           "start": float(t["start"]), "end": float(toks[i + 2]["end"])})
+            last_money_at = len(merged) - 1
+            i += 3
+            continue
+        # "5 e 41 dolares" -> US$ 5,41 (moeda depois dos centavos)
+        if (_num(txt) and nxt.lower() == "e" and i + 3 < len(toks)
+                and re.fullmatch(r"\d{2}", toks[i + 2]["text"].strip().rstrip(".,;:!?"))
+                and _strip_accents(toks[i + 3]["text"].strip().rstrip(".,;:!?").lower()) in money):
+            cur = toks[i + 3]["text"].strip(); pc = cur[len(cur.rstrip(".,;:!?")):]
+            sym = money[_strip_accents(cur.rstrip(".,;:!?").lower())]
+            merged.append({"text": "%s %s,%s%s" % (sym, txt.rstrip(".,"), toks[i + 2]["text"].strip().rstrip(".,;:!?"), pc),
+                           "start": float(t["start"]), "end": float(toks[i + 3]["end"])})
+            last_sym, last_money_at = sym, len(merged) - 1
+            i += 4
+            continue
+        if _num(txt) and key in money:
+            punct = nxt[len(nxt.rstrip(".,;:!?")):]
+            sym = money[key]
+            # "4 dolares e 53" -> US$ 4,53
+            if (i + 3 < len(toks) and toks[i + 2]["text"].strip().lower() == "e"
+                    and re.fullmatch(r"\d{2}", toks[i + 3]["text"].strip().rstrip(".,;:!?"))
+                    and not (i + 4 < len(toks) and _strip_accents(toks[i + 4]["text"].strip().rstrip(".,;:!?").lower()) in money)):
+                cents = toks[i + 3]["text"].strip(); pc = cents[len(cents.rstrip(".,;:!?")):]
+                merged.append({"text": "%s %s,%s%s" % (sym, txt.rstrip(".,"), cents.rstrip(".,;:!?"), pc),
+                               "start": float(t["start"]), "end": float(toks[i + 3]["end"])})
+                last_sym, last_money_at = sym, len(merged) - 1
+                i += 4
+                continue
+            merged.append({"text": "%s %s%s" % (sym, txt.rstrip(".,"), punct), "start": float(t["start"]), "end": float(toks[i + 1]["end"])})
+            last_sym, last_money_at = sym, len(merged) - 1
+            i += 2
+            continue
+        merged.append(t); i += 1
+    toks = merged
+
     out = []
     for t in toks:
-        txt = t["text"].strip().strip(".,!?;:—-").strip()
+        raw = t["text"].strip()
+        txt = raw.strip(".,!?;:—-").strip()
         if txt:
-            out.append({"text": txt, "start": t["start"], "end": t["end"]})
+            # v2.15: guarda a pontuacao de fim de frase/oracao ANTES de tirar --
+            # o agrupador de blocos quebra em fim de frase e prefere virgula
+            out.append({"text": txt, "start": t["start"], "end": t["end"],
+                        "sent_end": raw.endswith((".", "!", "?")),
+                        "clause_end": raw.endswith((",", ";", ":"))})
     return out
 
 
@@ -584,22 +641,57 @@ def group_blocks(toks, spans, prof):
     else:
         groups = [list(range(len(toks)))]
 
-    blocks = []
-    for g in groups:
+    # v2.15: dentro de cada pausa, quebrar SEMPRE em fim de frase (ponto) --
+    # antes o bloco colava o fim de uma frase com a primeira palavra da
+    # seguinte ("sem mudar o preco A") -- e, ao repartir por contagem,
+    # preferir cortar logo depois de uma virgula/dois-pontos.
+    def split_sentences(g):
+        parts, cur = [], []
+        for i in g:
+            cur.append(i)
+            if toks[i].get("sent_end"):
+                parts.append(cur)
+                cur = []
+        if cur:
+            parts.append(cur)
+        return parts
+
+    def chunk(g):
         n = len(g)
         if n <= hi:
-            blocks.append(list(g))
-            continue
-        k = int(math.ceil(n / float(typ)))
-        k = max(1, k)
-        size = int(math.ceil(n / float(k)))
-        size = max(lo, min(hi, size))
-        for s in range(0, n, size):
-            part = g[s:s + size]
-            if len(part) < lo and blocks:
-                blocks[-1].extend(part)
-            else:
-                blocks.append(part)
+            return [list(g)]
+        k = max(1, int(math.ceil(n / float(typ))))
+        size = max(lo, min(hi, int(math.ceil(n / float(k)))))
+        out, s = [], 0
+        while s < n:
+            e = min(n, s + size)
+            if e < n:
+                # virgula ate 2 tokens antes do corte (mantendo >= lo no
+                # pedaco) ou 1 token depois (se couber em hi)
+                cands = [e - 1 - back for back in (0, 1, 2)]
+                if e - s + 1 <= hi:
+                    cands.insert(1, e)
+                for j in cands:
+                    if s <= j < n - 1 and j - s + 1 >= lo and toks[g[j]].get("clause_end"):
+                        e = j + 1
+                        break
+            out.append(g[s:e])
+            s = e
+        # rabo curto: junta ao anterior so se continuar cabendo em hi
+        if len(out) > 1 and len(out[-1]) < lo and len(out[-2]) + len(out[-1]) <= hi:
+            out[-2].extend(out.pop())
+        return out
+
+    blocks = []
+    for g in groups:
+        for sent in split_sentences(g):
+            pieces = chunk(sent)
+            for part in pieces:
+                prev_closed = bool(blocks) and toks[blocks[-1][-1]].get("sent_end")
+                if len(part) < lo and blocks and not prev_closed and len(pieces) == 1:
+                    blocks[-1].extend(part)
+                else:
+                    blocks.append(part)
     return [b for b in blocks if b]
 
 
@@ -703,7 +795,19 @@ def build_captions(toks, spans, segs, total, prof, W, H, src2out, seg_of,
         split_done, guard, out = False, guard + 1, []
         for g in groups:
             if len(g) > 1 and layout_block(items_of(g), meas, usable, fs_min, 2) is None:
-                h = len(g) // 2
+                # v2.15: dividir onde as LARGURAS ficam equilibradas (nao a
+                # contagem), com pelo menos 2 palavras de cada lado quando
+                # der, e bonus para cortar logo depois de uma virgula
+                items = items_of(g)
+                lo_h = 2 if len(g) >= 4 else 1
+                best, best_cost = len(g) // 2, None
+                for h in range(lo_h, len(g) - lo_h + 1):
+                    wl = meas.width(items[:h], fs_min)
+                    wr = meas.width(items[h:], fs_min)
+                    cost = abs(wl - wr) - (0.35 * usable if toks[g[h - 1]].get("clause_end") else 0.0)
+                    if best_cost is None or cost < best_cost:
+                        best, best_cost = h, cost
+                h = best
                 out.append(g[:h]); out.append(g[h:]); split_done = True
             else:
                 out.append(g)

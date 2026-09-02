@@ -2,9 +2,15 @@
 
 Skill do Claude Code que edita um vídeo aplicando o estilo do "Video referencia":
 jump cuts dentro do mesmo enquadramento, legendas palavra a palavra com duas famílias
-tipográficas, zooms sutis, inserções gráficas e grading quente discreto.
+tipográficas, zooms sutis, inserções gráficas reais, logo oficial animado quando a fala cita
+uma empresa, sound design nos eventos de motion e grading quente discreto.
 
-Feita para vídeo vertical falado (VSL, Reels, TikTok).
+Feita para vídeo vertical falado (VSL, Reels, TikTok), inclusive vídeo que chega em trechos
+(clipes do Veo/influencIA) — com correção de pronúncia na origem.
+
+**v3.0 (01/09/2026)** — pipeline por estágios, transcrição guiada pela cópia, legenda com
+dinheiro em dígitos, fonemas para conferir pronúncia, prints via Playwright, biblioteca de SFX
+dentro da skill (45 efeitos Mixkit, licença livre) e validador com fontes reais.
 
 ---
 
@@ -20,10 +26,13 @@ A skill fica disponível como `/editclean` no Claude Code.
 
 | O quê | Como instalar | Para quê |
 |---|---|---|
-| ffmpeg + ffprobe | `brew install ffmpeg` | tudo |
-| faster-whisper | `pip3 install --user faster-whisper` | legendas com timestamp por palavra |
-| Pillow | `pip3 install --user Pillow` | medir largura de linha das legendas |
-| opencv-python-headless | `pip3 install --user opencv-python-headless` | localizar o rosto (altura da legenda) |
+| ffmpeg + ffprobe | `brew install ffmpeg` (ou binários em `~/.local/tools/`) | tudo |
+| faster-whisper | `pip3 install --user faster-whisper` | legendas com timestamp por palavra; corte das partes |
+| Pillow | `pip3 install --user Pillow` | medir largura das legendas, capa, perfis de SFX |
+| opencv-python-headless | `pip3 install --user opencv-python-headless` | localizar o rosto (altura da legenda, capa) |
+| torch + transformers *(opcional)* | `pip3 install --user torch transformers` | fonemas IPA (`phonemes.py`, `check_pron.py`, `influencia_fix_part.py pron`); baixa ~1,2 GB de modelo na 1ª vez |
+| Node ≥ 18 + Playwright em algum projeto *(opcional)* | `playwright_dir` no `.credentials.json` | prints reais de páginas (`shot_page.py`); usa o Chrome do sistema |
+| Google Chrome | — | rasterizar logotipos oficiais; fallback de prints |
 | scipy *(opcional)* | `pip3 install --user scipy` | só para reanalisar o vídeo de referência |
 
 ### Credenciais
@@ -35,22 +44,25 @@ Crie-o na raiz da skill:
 cat > ~/.claude/skills/editclean/.credentials.json <<'EOF'
 {
   "OPENAI_API_KEY": "sk-...",
-  "apify_token": "apify_api_..."
+  "apify_token": "apify_api_...",
+  "influencia_env": "/caminho/para/influencIA/.env",
+  "influencia_api": "https://.../api",
+  "playwright_dir": "/caminho/para/um/projeto/com/node_modules/playwright"
 }
 EOF
 chmod 600 ~/.claude/skills/editclean/.credentials.json
 ```
 
-- `OPENAI_API_KEY` — só é usada como **último recurso** de transcrição. Com o
-  faster-whisper instalado, não é necessária.
-- `apify_token` — busca de imagens para as inserções
-  ([apify.com](https://apify.com), actor `hooli/google-images-scraper`).
+- `OPENAI_API_KEY` — whisper-1 (conferência de pronúncia por parte), gpt-5.5 (legenda do post)
+  e último recurso de transcrição. Com o faster-whisper instalado, a transcrição não precisa dela.
+- `apify_token` — busca de imagens (Google Images via Apify). Plano FREE estoura fácil; o plano B
+  são prints reais de páginas oficiais com `shot_page.py`.
+- `influencia_env` / `influencia_api` — para o `influencia_fix_part.py` (LOGIN/SENHA do `.env`).
+- `playwright_dir` — pasta de um projeto que tenha `node_modules/playwright` (não precisa baixar
+  navegador: usa o Chrome instalado).
 
-Também funciona por variável de ambiente: `OPENAI_API_KEY`, `APIFY_TOKEN`.
-
-Para o `influencia_fix_part.py` (vídeos que vieram do influencIA) acrescente ao mesmo arquivo
-`"influencia_env"` (caminho do `.env` do influencIA, de onde saem LOGIN/SENHA/OPENAI_API_KEY)
-e `"influencia_api"` (URL da API de produção). Ou `INFLUENCIA_ENV` / `INFLUENCIA_API` no ambiente.
+Também funciona por variável de ambiente: `OPENAI_API_KEY`, `APIFY_TOKEN`, `INFLUENCIA_ENV`,
+`INFLUENCIA_API`, `PLAYWRIGHT_DIR`.
 
 ### Fontes
 
@@ -67,29 +79,32 @@ No Claude Code:
 
 ```
 /editclean "/caminho/do/video.mp4"
+/editclean /video/<id> no sistema InfluencIA
 ```
 
 Flags: `--output`, `--aspect keep|9:16|1:1|16:9`, `--captions auto|off`,
-`--quality draft|high`, `--images auto|off`, `--overwrite`.
+`--quality draft|high`, `--images auto|off`, `--parts auto|off`, `--logos auto|off`,
+`--sfx auto|off`, `--overwrite`.
 
-### Pipeline
+### Pipeline (v3.0)
 
 ```
-influencia_fix_part → parteN.mp4    (só vídeo do influencIA: pronúncia errada → troca a cópia
-                                     e regenera a parte na origem, reconferindo com whisper-1)
-concat_parts.py     → master.mp4    (só quando o vídeo chega em trechos: corta o ar morto
-                                     de cada parte, regra do influencIA, e junta)
-analyze_video.py    → manifest.json (silêncios, speech_spans, cenas, frames)
-detect_subject.py   → subject.json  (rosto: queixo, topo da cabeça, centro)
-transcribe.py       → words.json    (faster-whisper, timestamp por palavra)
-build_plan.py       → edit-plan.json (cortes, zooms, legendas, timeline)
-render_edit.py      → render.partial.mp4
-brand_logos.py      → saída.partial.mp4 (logo oficial animado no peito quando a fala
-                                         cita uma empresa; pula se não houver menção)
-validate_output.py  → aprova ou reprova
-make_cover.py       → <nome>_CAPA.png (capa cinematográfica com a tipografia da legenda)
-make_caption.py     → <nome>_LEGENDA.txt (legenda do post)
-deliver.py          → ~/Desktop/<Nome>/ (vídeo + capa + legenda + projeto/) — entrega SEMPRE assim
+job.json ─► pipeline.py prep     concat_parts (ignora backups) → analyze → subject → transcribe
+                                  → fix_transcript (cópias como verdade) → anchor_overlays
+                                  → build_plan rascunho → lista de blocos → validate-only
+           pipeline.py draft    render crf 30 + frames para olhar
+           pipeline.py render   build_plan alta → brand_logos plan → render crf 14 → logos crf 18
+                                  → sfx_mix (bus medido) → validate_output (fontes reais)
+           pipeline.py assets   make_cover (moods) + make_caption
+           pipeline.py deliver  mv do .partial aprovado + pasta no Desktop com projeto/
+```
+
+Antes do `prep`, se o vídeo veio do influencIA:
+
+```
+influencia_fix_part.py check   whisper-1 × cópia (números ignorados; pra/para tolerado)
+influencia_fix_part.py pron    fonemas IPA por parte: sotaque inglês, número engolido
+influencia_fix_part.py fix     troca a cópia, regenera na produção, reconfere, baixa
 ```
 
 Só depois de aprovado o `.partial.mp4` vira o arquivo final.
@@ -102,28 +117,37 @@ Só depois de aprovado o `.partial.mp4` vira o arquivo final.
 SKILL.md                      instruções que o Claude segue
 references/
   style-profile.json          todos os parâmetros (fonte operacional)
-  style-spec.md               como interpretar os parâmetros
+  style-spec.md               como interpretar os parâmetros (§1–24)
   edit-plan.schema.json       schema do plano de edição
+  brand-logos.json            registro de marcas: aliases, fonte OFICIAL do logo, cor
+  transcript-fixes.json       grafias que o Whisper erra (cache, Mythos, Anthropic, token…)
+  sfx-conventions.json        pesquisa de sound design (níveis, timing) + candidatos
 scripts/
+  pipeline.py                 orquestrador por estágios (job.json)
+  concat_parts.py             vídeo em trechos: corta o ar morto de cada parte e junta
+  influencia_fix_part.py      influencIA: check / pron / fix (regenera a parte pela API)
+  phonemes.py, check_pron.py  fonemas IPA (wav2vec2) — ouvir sem depender do transcritor
   analyze_video.py            análise de sinal do vídeo
-  detect_subject.py           acha o rosto (YuNet) e deriva as alturas seguras
+  detect_subject.py           rosto (YuNet) → alturas seguras
   transcribe.py               transcrição com timestamp por palavra
-  build_plan.py               monta o plano inteiro automaticamente
-  render_edit.py              renderiza (ffmpeg)
-  validate_output.py          19 checagens no arquivo final
+  fix_transcript.py           grafia + tempos da transcrição (cópias como verdade)
+  anchor_overlays.py          inserções e ênfases por frases-âncora (sobrevive a regeneração)
+  shot_page.py / .cjs         prints reais de páginas (Playwright + Chrome)
   fetch_images_apify.py       busca imagens (Google Images via Apify)
-  fetch_images.py             busca imagens (Creative Commons)
-  concat_parts.py             vídeo em trechos: corta o fim/começo morto de cada parte e junta
+  build_plan.py               monta o plano (blocos fecham no ponto; dinheiro em dígitos)
+  render_edit.py              renderiza (ffmpeg)
   brand_logos.py              logo de marca animado (plan / render / fetch)
-  influencia_fix_part.py      influencIA: acha pronúncia errada (whisper-1 vs cópia) e regenera a parte pela API
-  make_cover.py               capa 1080x1920: estilo cinema (imagem sem texto + tipografia da legenda) ou o thumbnail do influencIA
-  cover_gemini.cjs            helper Node do make_cover (gemini-3-pro-image via credencial do sistema)
-  make_caption.py             legenda do post para o Reels (gpt-5.5, prompt do influencIA, sem travessão)
-  deliver.py                  entrega: pasta no Desktop com vídeo + capa + legenda + projeto/
-references/brand-logos.json   registro de marcas: aliases, fonte OFICIAL do logo, cor
-assets/fonts/                 Playfair Display (OFL)
-assets/models/                YuNet, detector de rosto (MIT, 232 KB)
-assets/logos/                 logotipos oficiais rasterizados (baixados sob demanda, com .json de origem)
+  sfx_mix.py                  sound design nos eventos do plano, mix abaixo da voz
+  profile_sfx.py              perfil acústico de um SFX (para escolher alternativas)
+  validate_output.py          checagens no arquivo final (largura de legenda com fontes reais)
+  make_cover.py, cover_gemini.cjs   capa cinema
+  make_caption.py             legenda do post (gpt-5.5, sem travessão)
+  deliver.py                  pasta no Desktop com vídeo + capa + legenda + projeto/
+assets/
+  fonts/                      Playfair Display (OFL)
+  models/                     YuNet (MIT)
+  logos/                      logotipos oficiais rasterizados (com .json de origem)
+  sfx/                        manifest.json (efeito padrão por categoria) + library/ (45 Mixkit)
 _backup_v1/                   estado anterior à v2, só para referência
 ```
 
@@ -131,19 +155,16 @@ _backup_v1/                   estado anterior à v2, só para referência
 
 ## Sobre o perfil de estilo
 
-`references/style-profile.json` é a fonte da verdade. A v2 tem duas camadas:
+`references/style-profile.json` é a fonte da verdade. Tem duas camadas:
 
-1. **Medições** do vídeo de referência — várias feitas frame a frame (294 frames),
-   substituindo estimativas erradas do relatório original. Cada valor medido traz o
-   campo `*_origin` dizendo de onde veio.
-2. **`user_overrides`** — decisões tomadas depois de ver o resultado real.
-   **Prevalecem sobre o vídeo de referência** e não devem ser "corrigidas" de volta.
+1. **Medições** do vídeo de referência (294 frames), cada valor com `*_origin`.
+2. **`user_overrides`** — decisões do Gabriel depois de ver o resultado. **Prevalecem** e não
+   devem ser "corrigidas" de volta.
 
-Overrides atuais: legendas sempre centralizadas e em posição vertical única; nunca
-cortar enquanto a pessoa fala; efeitos mais suaves; imagens obrigatórias e só reais;
-vídeo em trechos cortado por parte (regra do influencIA); logo oficial animado no peito
-quando a fala cita uma empresa (flutuando, glow suave); encerramento com fade de áudio e
-tela preta.
+Overrides atuais: legendas sempre centralizadas e em posição vertical única; nunca cortar
+enquanto a pessoa fala; efeitos mais suaves; imagens obrigatórias e só reais; vídeo em trechos
+cortado por parte; logo oficial animado no peito (flutuando, glow suave); fade de áudio e tela
+preta no fim; sound design nos eventos; dinheiro na legenda em dígitos.
 
 ---
 
@@ -151,19 +172,24 @@ tela preta.
 
 Estão corrigidas no código e documentadas no `SKILL.md`. Não reintroduza:
 
-- `fps` logo depois de `zoompan` **multiplica os frames** (2 s viram 40 s) — o zoompan
-  emite PTS na timebase da entrada mas declara `1/fps` na saída.
-- Zoom sutil **treme** sem superamostragem: o zoompan arredonda para pixel inteiro.
-- `\fad` no evento inteiro faz **o bloco de legenda piscar** a cada palavra.
+- `fps` logo depois de `zoompan` **multiplica os frames**.
+- Zoom sutil **treme** sem superamostragem.
+- `\fad` no evento inteiro faz **o bloco de legenda piscar**.
 - Crossfade sobre fronteira sem silêncio **come fala**.
-- `-loop 1` no input de overlay **trava o render** para sempre.
+- `-loop 1` no input de overlay **trava o render**.
+- Backup `parteN_v1_*.mp4` na pasta das partes **duplica trechos** (v3.0: ignorado).
+- WAV do Mixkit traz **capítulo** que virava stream de texto no mp4 (v2.16: `-map_chapters -1`).
+- Transcritor **corrige a pronúncia** sozinho: "saibersegurança" vira "cibersegurança" no
+  texto. Só fonema ou ouvido pegam.
 
 ---
 
-## Licença
+## Licenças
 
-Uso pessoal. A fonte Playfair Display está sob [OFL](assets/licenses/OFL-PlayfairDisplay.txt).
+Uso pessoal. Playfair Display: [OFL](assets/licenses/OFL-PlayfairDisplay.txt). Efeitos sonoros em
+`assets/sfx/`: Mixkit Sound Effects Free License (uso comercial permitido, sem atribuição), origem
+e URL de cada um em `assets/sfx/library.json`.
 
-> **Aviso sobre imagens:** o `fetch_images_apify.py` busca no Google Images. O que vem
-> de lá **não é Creative Commons** e provavelmente tem direitos autorais. Confira,
-> recorte marcas de terceiros e prefira material próprio em uso comercial.
+> **Aviso sobre imagens:** o `fetch_images_apify.py` busca no Google Images e o `shot_page.py`
+> captura páginas de terceiros. Nada disso é Creative Commons. Confira, recorte marcas alheias e
+> prefira material próprio em uso comercial.

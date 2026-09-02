@@ -1,0 +1,906 @@
+{
+ "_license": "Mixkit Sound Effects Free License (https://mixkit.co/license/#sfxFree): uso comercial permitido, sem atribuicao; baixados 01/09/2026",
+ "_profile_fields": "dur_s duracao; useful_s trecho > -40 dB do pico; peak_dbfs; t_peak_s instante do pico; tail_s tempo ate cair 20 dB; energy_cm centro de massa da energia 0..1 (<0.4 ataque no comeco, >0.6 sobe); low/mid/high_db RMS por banda (<150 Hz, 150-2k, >2k)",
+ "items": [
+  {
+   "category": "whoosh_in",
+   "file": "library/whoosh_in/mixkit_1492.wav",
+   "name": "Cinematic whoosh fast transition (Mixkit #1492)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/1492/1492.wav",
+   "page": "https://mixkit.co/free-sound-effects/whoosh/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Whoosh cinematico que cresce ate o pico (pico em 0,83 s), ideal para 'entrar' num corte. Som efetivo 0,97 s (arquivo 1,33 s, 0,26 s de silencio inicial). Verificado 200 audio/wav; mp3: /sfx/1492/1492-preview.mp3 (200 audio/mpeg).",
+   "profile": {
+    "dur_s": 1.334,
+    "useful_s": 1.3,
+    "peak_dbfs": -2.6,
+    "t_peak_s": 1.07,
+    "tail_s": 0.16,
+    "energy_cm": 0.69,
+    "low_db": -49.4,
+    "mid_db": -29.5,
+    "high_db": -25.3
+   }
+  },
+  {
+   "category": "whoosh_in",
+   "file": "library/whoosh_in/mixkit_2607.wav",
+   "name": "Fast air woosh (Mixkit #2607)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/2607/2607.wav",
+   "page": "https://mixkit.co/free-sound-effects/woosh/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Whoosh de ar rapido e limpo, pico em 0,39 s. Som efetivo 0,77 s (arquivo 1,73 s). Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 1.728,
+    "useful_s": 0.98,
+    "peak_dbfs": -1.1,
+    "t_peak_s": 0.47,
+    "tail_s": 0.12,
+    "energy_cm": 0.25,
+    "low_db": -35.6,
+    "mid_db": -23.5,
+    "high_db": -29.9
+   }
+  },
+  {
+   "category": "whoosh_in",
+   "file": "library/whoosh_in/mixkit_1471.wav",
+   "name": "Cinematic wind swoosh (Mixkit #1471)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/1471/1471.wav",
+   "page": "https://mixkit.co/free-sound-effects/swoosh/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Swoosh de vento cinematico, curto. Som efetivo 0,65 s (arquivo 1,45 s), pico -2,6 dBFS. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 1.452,
+    "useful_s": 0.82,
+    "peak_dbfs": -4.0,
+    "t_peak_s": 0.43,
+    "tail_s": 0.26,
+    "energy_cm": 0.29,
+    "low_db": -29.2,
+    "mid_db": -24.6,
+    "high_db": -38.0
+   }
+  },
+  {
+   "category": "whoosh_in",
+   "file": "library/whoosh_in/mixkit_1468.wav",
+   "name": "Cinematic transition wind swoosh (Mixkit #1468)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/1468/1468.wav",
+   "page": "https://mixkit.co/free-sound-effects/swoosh/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Ataque na frente (pico em 0,14 s) e cauda curta: bom para alinhar o inicio do whoosh com o corte. Som efetivo 0,72 s (arquivo 1,32 s). Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 1.323,
+    "useful_s": 0.92,
+    "peak_dbfs": -1.4,
+    "t_peak_s": 0.31,
+    "tail_s": 0.32,
+    "energy_cm": 0.33,
+    "low_db": -38.0,
+    "mid_db": -21.1,
+    "high_db": -33.7
+   }
+  },
+  {
+   "category": "whoosh_in",
+   "file": "library/whoosh_in/mixkit_2605.wav",
+   "name": "Quick air woosh (Mixkit #2605)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/2605/2605.wav",
+   "page": "https://mixkit.co/free-sound-effects/woosh/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Whoosh de ar um pouco mais longo, comeca em 0,01 s (sem silencio inicial). Som efetivo 1,01 s (arquivo 1,51 s). Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 1.511,
+    "useful_s": 1.14,
+    "peak_dbfs": -0.3,
+    "t_peak_s": 0.25,
+    "tail_s": 0.58,
+    "energy_cm": 0.24,
+    "low_db": -28.2,
+    "mid_db": -18.9,
+    "high_db": -34.7
+   }
+  },
+  {
+   "category": "whoosh_out",
+   "file": "library/whoosh_out/mixkit_2627.wav",
+   "name": "Fast swipe zoom (Mixkit #2627)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/2627/2627.wav",
+   "page": "https://mixkit.co/free-sound-effects/woosh/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Swipe/zoom rapido, pico em 0,17 s e decai: sensacao de 'saida'. Som efetivo 0,45 s (arquivo 1,06 s). Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 1.056,
+    "useful_s": 0.56,
+    "peak_dbfs": -3.1,
+    "t_peak_s": 0.27,
+    "tail_s": 0.2,
+    "energy_cm": 0.26,
+    "low_db": -50.0,
+    "mid_db": -24.5,
+    "high_db": -28.9
+   }
+  },
+  {
+   "category": "whoosh_out",
+   "file": "library/whoosh_out/mixkit_2608.wav",
+   "name": "Air zoom vacuum (Mixkit #2608)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/2608/2608.wav",
+   "page": "https://mixkit.co/free-sound-effects/transition/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Efeito 'vacuo' (ar sendo sugado), muito curto: 0,31 s efetivo (arquivo 1,27 s, 0,22 s de silencio inicial). Bom whoosh de saida sem reverse. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 1.275,
+    "useful_s": 0.42,
+    "peak_dbfs": -1.0,
+    "t_peak_s": 0.45,
+    "tail_s": 0.08,
+    "energy_cm": 0.32,
+    "low_db": -28.5,
+    "mid_db": -24.3,
+    "high_db": -29.2
+   }
+  },
+  {
+   "category": "whoosh_out",
+   "file": "library/whoosh_out/mixkit_168.wav",
+   "name": "Fast air sweep transition (Mixkit #168)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/168/168.wav",
+   "page": "https://mixkit.co/free-sound-effects/sweep/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Sweep de ar rapido, arquivo inteiro 0,86 s (efetivo 0,57 s). Funciona invertido (reverse no ffmpeg: -af areverse) como whoosh_out. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 0.861,
+    "useful_s": 0.7,
+    "peak_dbfs": -2.9,
+    "t_peak_s": 0.33,
+    "tail_s": 0.26,
+    "energy_cm": 0.39,
+    "low_db": -25.2,
+    "mid_db": -22.4,
+    "high_db": -34.6
+   }
+  },
+  {
+   "category": "whoosh_out",
+   "file": "library/whoosh_out/mixkit_166.wav",
+   "name": "Fast small sweep transition (Mixkit #166)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/166/166.wav",
+   "page": "https://mixkit.co/free-sound-effects/transition/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Sweep pequeno e rapido, arquivo 0,78 s (efetivo 0,54 s), pico -0,1 dBFS (ja normalizado). Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 0.781,
+    "useful_s": 0.62,
+    "peak_dbfs": -3.9,
+    "t_peak_s": 0.33,
+    "tail_s": 0.2,
+    "energy_cm": 0.4,
+    "low_db": -21.6,
+    "mid_db": -26.3,
+    "high_db": -36.8
+   }
+  },
+  {
+   "category": "whoosh_out",
+   "file": "library/whoosh_out/mixkit_2619.wav",
+   "name": "UI zoom out (Mixkit #2619)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/2619/2619.wav",
+   "page": "https://mixkit.co/free-sound-effects/ui/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Zoom-out de interface, sintetico e discreto (pico -11,4 dBFS, talvez precise de +6 a +9 dB). Som efetivo 0,71 s (arquivo 1,15 s). Existe o par 'UI zoom in' #2617 (0,42 s). Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 1.149,
+    "useful_s": 0.98,
+    "peak_dbfs": -12.0,
+    "t_peak_s": 0.33,
+    "tail_s": 0.48,
+    "energy_cm": 0.36,
+    "low_db": -111.6,
+    "mid_db": -57.1,
+    "high_db": -27.6
+   }
+  },
+  {
+   "category": "pop",
+   "file": "library/pop/mixkit_2356.wav",
+   "name": "Dry pop up notification alert (Mixkit #2356)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/2356/2356.wav",
+   "page": "https://mixkit.co/free-sound-effects/pop/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Pop seco e suave de UI, o mais discreto do lote: 0,19 s efetivo (arquivo 0,30 s), pico -5 dBFS. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 0.305,
+    "useful_s": 0.3,
+    "peak_dbfs": -5.1,
+    "t_peak_s": 0.05,
+    "tail_s": 0.04,
+    "energy_cm": 0.36,
+    "low_db": -36.8,
+    "mid_db": -22.5,
+    "high_db": -34.2
+   }
+  },
+  {
+   "category": "pop",
+   "file": "library/pop/mixkit_2357.wav",
+   "name": "Bubble pop up alert notification (Mixkit #2357)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/2357/2357.wav",
+   "page": "https://mixkit.co/free-sound-effects/pop/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Pop tipo bolha, redondo, bom para elementos aparecendo. 0,29 s efetivo (arquivo 0,38 s), pico -4,9 dBFS. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 0.381,
+    "useful_s": 0.32,
+    "peak_dbfs": -5.2,
+    "t_peak_s": 0.05,
+    "tail_s": 0.14,
+    "energy_cm": 0.36,
+    "low_db": -31.1,
+    "mid_db": -21.0,
+    "high_db": -27.6
+   }
+  },
+  {
+   "category": "pop",
+   "file": "library/pop/mixkit_2358.wav",
+   "name": "Long pop (Mixkit #2358)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/2358/2358.wav",
+   "page": "https://mixkit.co/free-sound-effects/pop/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Pop um pouco mais cheio, 0,36 s efetivo (arquivo 0,48 s), pico -2,1 dBFS. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 0.479,
+    "useful_s": 0.46,
+    "peak_dbfs": -2.1,
+    "t_peak_s": 0.03,
+    "tail_s": 0.04,
+    "energy_cm": 0.23,
+    "low_db": -42.1,
+    "mid_db": -24.3,
+    "high_db": -39.9
+   }
+  },
+  {
+   "category": "pop",
+   "file": "library/pop/mixkit_3005.wav",
+   "name": "Explainer video pops whoosh light pop (Mixkit #3005)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/3005/3005.wav",
+   "page": "https://mixkit.co/free-sound-effects/pop/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Pop leve feito para explainer/motion; arquivo inteiro 0,18 s (efetivo 0,15 s). Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 0.18,
+    "useful_s": 0.16,
+    "peak_dbfs": -2.0,
+    "t_peak_s": 0.03,
+    "tail_s": 0.14,
+    "energy_cm": 0.26,
+    "low_db": -22.5,
+    "mid_db": -17.3,
+    "high_db": -28.6
+   }
+  },
+  {
+   "category": "pop",
+   "file": "library/pop/mixkit_2925.wav",
+   "name": "Soap bubble sound (Mixkit #2925)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/2925/2925.wav",
+   "page": "https://mixkit.co/free-sound-effects/pop/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Estouro de bolha de sabao, organico. 0,19 s efetivo (arquivo 1,14 s com cauda silenciosa), pico -0,3 dBFS (alto, reduzir ganho). Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 1.138,
+    "useful_s": 0.2,
+    "peak_dbfs": -0.3,
+    "t_peak_s": 0.19,
+    "tail_s": 0.04,
+    "energy_cm": 0.11,
+    "low_db": -50.8,
+    "mid_db": -24.4,
+    "high_db": -33.7
+   }
+  },
+  {
+   "category": "click",
+   "file": "library/click/mixkit_1120.wav",
+   "name": "Modern click box check (Mixkit #1120)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/1120/1120.wav",
+   "page": "https://mixkit.co/free-sound-effects/click/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Tick de checkbox moderno, bem sutil: 0,07 s efetivo (arquivo 0,24 s), pico -10 dBFS. Melhor candidato a 'tick'. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 0.237,
+    "useful_s": 0.08,
+    "peak_dbfs": -10.0,
+    "t_peak_s": 0.11,
+    "tail_s": 0.08,
+    "energy_cm": 0.52,
+    "low_db": -52.2,
+    "mid_db": -29.2,
+    "high_db": -47.7
+   }
+  },
+  {
+   "category": "click",
+   "file": "library/click/mixkit_2568.wav",
+   "name": "Cool interface click tone (Mixkit #2568)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/2568/2568.wav",
+   "page": "https://mixkit.co/free-sound-effects/click/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Click de interface com leve tom, 0,04 s efetivo (arquivo 0,20 s), pico -6,1 dBFS. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 0.199,
+    "useful_s": 0.06,
+    "peak_dbfs": -6.1,
+    "t_peak_s": 0.01,
+    "tail_s": 0.04,
+    "energy_cm": 0.07,
+    "low_db": -72.2,
+    "mid_db": -30.4,
+    "high_db": -30.2
+   }
+  },
+  {
+   "category": "click",
+   "file": "library/click/mixkit_3124.wav",
+   "name": "Modern technology select (Mixkit #3124)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/3124/3124.wav",
+   "page": "https://mixkit.co/free-sound-effects/click/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Select de tecnologia, seco e curtissimo: 0,03 s efetivo (arquivo 0,50 s), pico -4,8 dBFS. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 0.5,
+    "useful_s": 0.04,
+    "peak_dbfs": -4.4,
+    "t_peak_s": 0.01,
+    "tail_s": 0.04,
+    "energy_cm": 0.03,
+    "low_db": -72.1,
+    "mid_db": -31.2,
+    "high_db": -31.7
+   }
+  },
+  {
+   "category": "click",
+   "file": "library/click/mixkit_1117.wav",
+   "name": "Classic click (Mixkit #1117)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/1117/1117.wav",
+   "page": "https://mixkit.co/free-sound-effects/click/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Click classico, 0,08 s efetivo (arquivo 0,29 s), pico 0 dBFS (mais presente; reduzir uns 6-10 dB para ficar sutil). Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 0.288,
+    "useful_s": 0.1,
+    "peak_dbfs": -1.1,
+    "t_peak_s": 0.13,
+    "tail_s": 0.06,
+    "energy_cm": 0.46,
+    "low_db": -48.5,
+    "mid_db": -28.0,
+    "high_db": -24.8
+   }
+  },
+  {
+   "category": "click",
+   "file": "library/click/mixkit_1127.wav",
+   "name": "Interface click hover (Mixkit #1127)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/1127/1127.wav",
+   "page": "https://mixkit.co/free-sound-effects/hover/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Hover de interface, o mais baixo de todos (pico -21,3 dBFS, 0,02 s efetivo, arquivo 0,38 s com 0,25 s de silencio inicial). Precisa de ganho, mas e o tick mais discreto. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 0.375,
+    "useful_s": 0.18,
+    "peak_dbfs": -22.7,
+    "t_peak_s": 0.25,
+    "tail_s": 0.06,
+    "energy_cm": 0.63,
+    "low_db": -112.2,
+    "mid_db": -63.9,
+    "high_db": -49.4
+   }
+  },
+  {
+   "category": "riser",
+   "file": "library/riser/mixkit_790.wav",
+   "name": "Cinematic trailer riser (Mixkit #790)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/790/790.wav",
+   "page": "https://mixkit.co/free-sound-effects/riser/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Unico item da tag 'riser' curto o bastante: som efetivo 1,52 s, mas o arquivo (2,57 s) tem 1,05 s de silencio no inicio; cortar com -ss 1.0. Pico -6,3 dBFS. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 2.575,
+    "useful_s": 2.14,
+    "peak_dbfs": -8.4,
+    "t_peak_s": 2.53,
+    "tail_s": 0.06,
+    "energy_cm": 0.81,
+    "low_db": -30.0,
+    "mid_db": -32.6,
+    "high_db": -39.5
+   }
+  },
+  {
+   "category": "riser",
+   "file": "library/riser/mixkit_2635.wav",
+   "name": "Futuristic cinematic sweep (Mixkit #2635)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/2635/2635.wav",
+   "page": "https://mixkit.co/free-sound-effects/sweep/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Sweep cinematico que sobe, 1,12 s efetivo (arquivo 1,29 s), pico em 0,53 s. Encaixa direto na faixa 0,7-1,5 s sem corte. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 1.287,
+    "useful_s": 1.14,
+    "peak_dbfs": -0.8,
+    "t_peak_s": 0.61,
+    "tail_s": 0.62,
+    "energy_cm": 0.54,
+    "low_db": -34.7,
+    "mid_db": -20.1,
+    "high_db": -19.3
+   }
+  },
+  {
+   "category": "riser",
+   "file": "library/riser/mixkit_171.wav",
+   "name": "Futuristic robotic fast sweep (Mixkit #171)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/171/171.wav",
+   "page": "https://mixkit.co/free-sound-effects/sweep/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Riser sintetico curto, 0,75 s efetivo (arquivo 2,0 s com cauda), pico -4,7 dBFS. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 2.0,
+    "useful_s": 0.82,
+    "peak_dbfs": -6.1,
+    "t_peak_s": 0.31,
+    "tail_s": 0.5,
+    "energy_cm": 0.2,
+    "low_db": -28.5,
+    "mid_db": -28.0,
+    "high_db": -33.7
+   }
+  },
+  {
+   "category": "riser",
+   "file": "library/riser/mixkit_787.wav",
+   "name": "Cinematic whoosh stutter (Mixkit #787)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/787/787.wav",
+   "page": "https://mixkit.co/free-sound-effects/whoosh/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Riser tipo 'stutter' (gagueja e cresce ate o pico em 1,42 s). 1,91 s efetivo (arquivo 2,52 s, 0,4 s de silencio inicial); um pouco acima de 1,5 s, cortar o comeco se precisar. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 2.517,
+    "useful_s": 2.04,
+    "peak_dbfs": -1.2,
+    "t_peak_s": 2.05,
+    "tail_s": 0.08,
+    "energy_cm": 0.68,
+    "low_db": -20.8,
+    "mid_db": -23.2,
+    "high_db": -30.6
+   }
+  },
+  {
+   "category": "riser",
+   "file": "library/riser/mixkit_2633.wav",
+   "name": "Sweeping sparkle presentation intro (Mixkit #2633)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/2633/2633.wav",
+   "page": "https://mixkit.co/free-sound-effects/sweep/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Riser brilhante (sweep + sparkle), mais 'clean/tech' que cinema pesado. 1,77 s efetivo (arquivo 3,0 s), pico em 0,85 s. Serve tambem como shimmer de entrada. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 2.998,
+    "useful_s": 2.32,
+    "peak_dbfs": -2.1,
+    "t_peak_s": 0.91,
+    "tail_s": 0.62,
+    "energy_cm": 0.34,
+    "low_db": -27.3,
+    "mid_db": -27.1,
+    "high_db": -33.0
+   }
+  },
+  {
+   "category": "impact",
+   "file": "library/impact/mixkit_2150.wav",
+   "name": "Impact of a blow (Mixkit #2150)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/2150/2150.wav",
+   "page": "https://mixkit.co/free-sound-effects/impact/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Hit curto e seco, cauda pequena: 0,35 s efetivo (arquivo 0,59 s), pico -2,3 dBFS. Bom 'soft hit' para pontuar corte. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 0.591,
+    "useful_s": 0.4,
+    "peak_dbfs": -2.4,
+    "t_peak_s": 0.19,
+    "tail_s": 0.2,
+    "energy_cm": 0.4,
+    "low_db": -25.4,
+    "mid_db": -26.3,
+    "high_db": -30.3
+   }
+  },
+  {
+   "category": "impact",
+   "file": "library/impact/mixkit_2655.wav",
+   "name": "Fast impact blow (Mixkit #2655)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/2655/2655.wav",
+   "page": "https://mixkit.co/free-sound-effects/impact/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Whoosh curto que termina num impacto (pico em 0,32 s): whoosh + hit num arquivo so. 0,63 s efetivo (arquivo 1,33 s). Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 1.333,
+    "useful_s": 0.7,
+    "peak_dbfs": -3.6,
+    "t_peak_s": 0.17,
+    "tail_s": 0.4,
+    "energy_cm": 0.2,
+    "low_db": -26.2,
+    "mid_db": -22.8,
+    "high_db": -39.7
+   }
+  },
+  {
+   "category": "impact",
+   "file": "library/impact/mixkit_772.wav",
+   "name": "Quick zoom impact (Mixkit #772)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/772/772.wav",
+   "page": "https://mixkit.co/free-sound-effects/impact/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Impacto de 'zoom' cinematico, 0,59 s efetivo (arquivo 1,22 s), pico em 0,33 s. Otimo para punch-in de camera. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 1.222,
+    "useful_s": 0.62,
+    "peak_dbfs": -1.0,
+    "t_peak_s": 0.51,
+    "tail_s": 0.14,
+    "energy_cm": 0.34,
+    "low_db": -20.7,
+    "mid_db": -22.7,
+    "high_db": -24.5
+   }
+  },
+  {
+   "category": "impact",
+   "file": "library/impact/mixkit_2148.wav",
+   "name": "Weak hit impact (Mixkit #2148)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/2148/2148.wav",
+   "page": "https://mixkit.co/free-sound-effects/hit/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "O hit mais suave do lote (pico -5,6 dBFS), 0,35 s efetivo (arquivo 0,59 s). Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 0.591,
+    "useful_s": 0.4,
+    "peak_dbfs": -5.6,
+    "t_peak_s": 0.15,
+    "tail_s": 0.22,
+    "energy_cm": 0.35,
+    "low_db": -25.2,
+    "mid_db": -27.2,
+    "high_db": -30.5
+   }
+  },
+  {
+   "category": "impact",
+   "file": "library/impact/mixkit_498.wav",
+   "name": "Deep heartbeat impact (Mixkit #498)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/498/498.wav",
+   "page": "https://mixkit.co/free-sound-effects/impact/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Impacto grave cinematico com cauda (1,21 s efetivo, arquivo 3,47 s), ataque logo no inicio (0,06 s). Para momentos mais dramaticos. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 3.469,
+    "useful_s": 1.5,
+    "peak_dbfs": -1.6,
+    "t_peak_s": 0.09,
+    "tail_s": 0.52,
+    "energy_cm": 0.11,
+    "low_db": -25.8,
+    "mid_db": -27.4,
+    "high_db": -64.7
+   }
+  },
+  {
+   "category": "bass_hit",
+   "file": "library/bass_hit/mixkit_2299.wav",
+   "name": "Short bass hit (Mixkit #2299)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/2299/2299.wav",
+   "page": "https://mixkit.co/free-sound-effects/bass/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Bass hit curto, ataque em 0,03 s, 0,56 s efetivo (arquivo 1,10 s). Melhor 'sub thump' direto do Mixkit. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 1.101,
+    "useful_s": 0.84,
+    "peak_dbfs": -0.3,
+    "t_peak_s": 0.09,
+    "tail_s": 0.32,
+    "energy_cm": 0.18,
+    "low_db": -13.2,
+    "mid_db": -28.2,
+    "high_db": -65.1
+   }
+  },
+  {
+   "category": "bass_hit",
+   "file": "library/bass_hit/mixkit_490.wav",
+   "name": "Human single heart beat (Mixkit #490)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/490/490.wav",
+   "page": "https://mixkit.co/free-sound-effects/boom/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Batida unica de coracao: thump grave e abafado, 0,41 s efetivo (arquivo 1,10 s). Passa muito bem como sub sutil por baixo de um corte. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 1.101,
+    "useful_s": 0.42,
+    "peak_dbfs": -2.2,
+    "t_peak_s": 0.05,
+    "tail_s": 0.06,
+    "energy_cm": 0.15,
+    "low_db": -17.4,
+    "mid_db": -26.9,
+    "high_db": -63.8
+   }
+  },
+  {
+   "category": "bass_hit",
+   "file": "library/bass_hit/mixkit_2301.wav",
+   "name": "Quick bass switch (Mixkit #2301)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/2301/2301.wav",
+   "page": "https://mixkit.co/free-sound-effects/bass/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Bass 'switch' cinematico e discreto (pico -10,4 dBFS), 0,42 s efetivo (arquivo 2,0 s). Sub sutil por natureza. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 2.0,
+    "useful_s": 1.22,
+    "peak_dbfs": -12.2,
+    "t_peak_s": 0.33,
+    "tail_s": 0.24,
+    "energy_cm": 0.17,
+    "low_db": -28.1,
+    "mid_db": -44.8,
+    "high_db": -65.9
+   }
+  },
+  {
+   "category": "bass_hit",
+   "file": "library/bass_hit/mixkit_2303.wav",
+   "name": "Futuristic bass hit (Mixkit #2303)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/2303/2303.wav",
+   "page": "https://mixkit.co/free-sound-effects/bass/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Bass hit com timbre mais sintetico, 0,97 s efetivo (arquivo 2,75 s), pico em 0,15 s. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 2.75,
+    "useful_s": 1.16,
+    "peak_dbfs": -4.4,
+    "t_peak_s": 0.25,
+    "tail_s": 0.5,
+    "energy_cm": 0.13,
+    "low_db": -19.1,
+    "mid_db": -34.9,
+    "high_db": -55.2
+   }
+  },
+  {
+   "category": "bass_hit",
+   "file": "library/bass_hit/mixkit_2294.wav",
+   "name": "Drum bass hit (Mixkit #2294)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/2294/2294.wav",
+   "page": "https://mixkit.co/free-sound-effects/drum/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Bumbo orquestral grave, 1,22 s efetivo (arquivo 1,53 s), ataque imediato. Mais 'trailer' que sub puro; usar low-pass se quiser so o thump. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 1.53,
+    "useful_s": 1.24,
+    "peak_dbfs": -0.3,
+    "t_peak_s": 0.03,
+    "tail_s": 0.86,
+    "energy_cm": 0.22,
+    "low_db": -11.9,
+    "mid_db": -27.0,
+    "high_db": -53.5
+   }
+  },
+  {
+   "category": "shimmer",
+   "file": "library/shimmer/mixkit_871.wav",
+   "name": "Fairy magic sparkle (Mixkit #871)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/871/871.wav",
+   "page": "https://mixkit.co/free-sound-effects/sparkle/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Sparkle curto e cristalino, 0,56 s efetivo (arquivo 1,30 s). Mixkit nao tem tag 'shimmer' (pagina retorna 'No results'); sparkle/magic/glow sao o equivalente. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 1.301,
+    "useful_s": 0.76,
+    "peak_dbfs": -6.0,
+    "t_peak_s": 0.45,
+    "tail_s": 0.26,
+    "energy_cm": 0.31,
+    "low_db": -85.3,
+    "mid_db": -43.6,
+    "high_db": -22.9
+   }
+  },
+  {
+   "category": "shimmer",
+   "file": "library/shimmer/mixkit_866.wav",
+   "name": "Fairy arcade sparkle (Mixkit #866)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/866/866.wav",
+   "page": "https://mixkit.co/free-sound-effects/sparkle/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Sparkle com toque arcade/8-bit, 0,66 s efetivo (arquivo 1,50 s), comeca em 0 s. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 1.497,
+    "useful_s": 1.12,
+    "peak_dbfs": -5.9,
+    "t_peak_s": 0.01,
+    "tail_s": 0.5,
+    "energy_cm": 0.15,
+    "low_db": -72.2,
+    "mid_db": -39.3,
+    "high_db": -26.1
+   }
+  },
+  {
+   "category": "shimmer",
+   "file": "library/shimmer/mixkit_3062.wav",
+   "name": "Magic wand sparkle (Mixkit #3062)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/3062/3062.wav",
+   "page": "https://mixkit.co/free-sound-effects/sparkle/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Sparkle de varinha, 0,78 s efetivo (arquivo 2,50 s), pico -4,1 dBFS. Bom para destacar texto/logo. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 2.5,
+    "useful_s": 1.06,
+    "peak_dbfs": -5.2,
+    "t_peak_s": 0.17,
+    "tail_s": 0.52,
+    "energy_cm": 0.14,
+    "low_db": -76.2,
+    "mid_db": -47.8,
+    "high_db": -29.4
+   }
+  },
+  {
+   "category": "shimmer",
+   "file": "library/shimmer/mixkit_3083.wav",
+   "name": "Magic sparkle touch (Mixkit #3083)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/3083/3083.wav",
+   "page": "https://mixkit.co/free-sound-effects/sparkle/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Sparkle 'touch', um pouco mais longo e suave: 1,20 s efetivo (arquivo 2,33 s). Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 2.333,
+    "useful_s": 1.42,
+    "peak_dbfs": -5.0,
+    "t_peak_s": 0.47,
+    "tail_s": 0.82,
+    "energy_cm": 0.31,
+    "low_db": -57.6,
+    "mid_db": -44.8,
+    "high_db": -26.7
+   }
+  },
+  {
+   "category": "shimmer",
+   "file": "library/shimmer/mixkit_870.wav",
+   "name": "Sparkling fairy glow (Mixkit #870)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/870/870.wav",
+   "page": "https://mixkit.co/free-sound-effects/glow/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Glow continuo brilhante (2,02 s efetivo, arquivo 3,97 s), pico -5,5 dBFS. Para 'brilho' sustentado em vez de um sparkle pontual. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 3.969,
+    "useful_s": 3.0,
+    "peak_dbfs": -5.4,
+    "t_peak_s": 0.51,
+    "tail_s": 0.76,
+    "energy_cm": 0.21,
+    "low_db": -98.5,
+    "mid_db": -52.9,
+    "high_db": -30.7
+   }
+  },
+  {
+   "category": "slide",
+   "file": "library/slide/mixkit_1530.wav",
+   "name": "Paper slide (Mixkit #1530)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/1530/1530.wav",
+   "page": "https://mixkit.co/free-sound-effects/slide/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Deslize de papel, organico e curto: 0,38 s efetivo (arquivo 1,09 s). Bom para cartao/legenda entrando. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 1.094,
+    "useful_s": 0.46,
+    "peak_dbfs": -0.7,
+    "t_peak_s": 0.35,
+    "tail_s": 0.08,
+    "energy_cm": 0.25,
+    "low_db": -38.2,
+    "mid_db": -37.0,
+    "high_db": -37.0
+   }
+  },
+  {
+   "category": "slide",
+   "file": "library/slide/mixkit_3120.wav",
+   "name": "Technology transition slide (Mixkit #3120)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/3120/3120.wav",
+   "page": "https://mixkit.co/free-sound-effects/slide/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Slide tech para transicao de UI, discreto (pico -10,8 dBFS), 0,47 s efetivo (arquivo 1,65 s). Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 1.65,
+    "useful_s": 0.5,
+    "peak_dbfs": -11.0,
+    "t_peak_s": 0.13,
+    "tail_s": 0.36,
+    "energy_cm": 0.12,
+    "low_db": -49.0,
+    "mid_db": -37.9,
+    "high_db": -39.1
+   }
+  },
+  {
+   "category": "slide",
+   "file": "library/slide/mixkit_1533.wav",
+   "name": "Futuristic slide (Mixkit #1533)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/1533/1533.wav",
+   "page": "https://mixkit.co/free-sound-effects/slide/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Slide futurista, arquivo inteiro 0,64 s (efetivo 0,50 s), pico -5,4 dBFS. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 0.643,
+    "useful_s": 0.6,
+    "peak_dbfs": -4.0,
+    "t_peak_s": 0.37,
+    "tail_s": 0.24,
+    "energy_cm": 0.65,
+    "low_db": -20.9,
+    "mid_db": -22.5,
+    "high_db": -38.3
+   }
+  },
+  {
+   "category": "slide",
+   "file": "library/slide/mixkit_1531.wav",
+   "name": "Warping slide (Mixkit #1531)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/1531/1531.wav",
+   "page": "https://mixkit.co/free-sound-effects/slide/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Slide com 'warp' (pitch deslizando), 0,69 s efetivo (arquivo 2,0 s), pico -3,7 dBFS. Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 2.0,
+    "useful_s": 0.82,
+    "peak_dbfs": -2.9,
+    "t_peak_s": 0.37,
+    "tail_s": 0.42,
+    "energy_cm": 0.24,
+    "low_db": -34.2,
+    "mid_db": -37.3,
+    "high_db": -32.6
+   }
+  },
+  {
+   "category": "slide",
+   "file": "library/slide/mixkit_1527.wav",
+   "name": "Glass plate slide (Mixkit #1527)",
+   "url": "https://assets.mixkit.co/active_storage/sfx/1527/1527.wav",
+   "page": "https://mixkit.co/free-sound-effects/slide/",
+   "license": "Mixkit License (free, commercial ok, no attribution)",
+   "why": "Deslize de vidro, suave e baixo (pico -11 dBFS), 0,65 s efetivo (arquivo 1,13 s). Verificado 200 audio/wav.",
+   "profile": {
+    "dur_s": 1.132,
+    "useful_s": 0.78,
+    "peak_dbfs": -11.0,
+    "t_peak_s": 0.27,
+    "tail_s": 0.44,
+    "energy_cm": 0.27,
+    "low_db": -46.5,
+    "mid_db": -27.6,
+    "high_db": -35.2
+   }
+  }
+ ]
+}

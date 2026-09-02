@@ -1,6 +1,6 @@
 {
  "profile_name": "EditClean",
- "profile_version": "2.14.1",
+ "profile_version": "3.0.0",
  "derived_from": "ANALISE_TECNICA_EDICAO_VIDEO_REFERENCIA.md + medicao direta de 294 frames de 'Edit Pro/Video referencia.mp4' + preferencias do usuario (ver user_overrides)",
  "reference_material": {
   "duration_s": 152.2,

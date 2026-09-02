@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-EditClean - deliver.py  (v2.14)
+EditClean - deliver.py  (v3.0)
 
 Entrega final SEMPRE numa pasta no Desktop (pedido do Gabriel 01/09: "entrega o video + legenda
 + thumb dentro de uma pasta no desktop sempre"):
@@ -23,6 +23,7 @@ Uso:
 
 import argparse
 import glob
+import json
 import os
 import re
 import shutil
@@ -83,10 +84,28 @@ def main():
     if args.project_dir and os.path.isdir(args.project_dir):
         pdir = os.path.join(folder, "projeto")
         os.makedirs(pdir, exist_ok=True)
-        for pat in ("edit-plan.json", "words.json", "acc.json", "ov.json", "subject.json", "val.json",
-                    "brand-logos.json", "partes_report.json", "partes_overrides.json", "*.capa.json", "*.legenda.json"):
+        for pat in ("edit-plan.json", "words.json", "words_raw.json", "acc.json", "ov.json", "subject.json", "val.json",
+                    "validation*.json", "brand-logos.json", "partes_report.json", "partes_overrides.json",
+                    "influencia_check.json", "project_meta.json", "sfx-events.json", "job.json",
+                    "*.capa.json", "*.legenda.json"):
             for f in glob.glob(os.path.join(args.project_dir, pat)):
                 shutil.copyfile(f, os.path.join(pdir, os.path.basename(f)))
+        # v3.0: as imagens inseridas (referenciadas no ov.json) e o manifesto de SFX usado
+        ovp = os.path.join(args.project_dir, "ov.json")
+        if os.path.isfile(ovp):
+            try:
+                ovs = json.load(open(ovp, encoding="utf-8"))
+                ovs = ovs if isinstance(ovs, list) else ovs.get("overlays", [])
+                idir = os.path.join(pdir, "insercoes"); os.makedirs(idir, exist_ok=True)
+                for o in ovs:
+                    src = o.get("path")
+                    if src and os.path.isfile(src):
+                        shutil.copyfile(src, os.path.join(idir, "%s_%s" % (o.get("id", "OV"), os.path.basename(src))))
+            except Exception as e:
+                log("insercoes nao copiadas: %s" % e)
+        sfx_man = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", "sfx", "manifest.json")
+        if os.path.isfile(sfx_man):
+            shutil.copyfile(sfx_man, os.path.join(pdir, "sfx-manifest.json"))
     for k in ("cover", "caption"):
         if not out.get(k):
             log("AVISO: sem %s na entrega" % ("capa" if k == "cover" else "legenda"))

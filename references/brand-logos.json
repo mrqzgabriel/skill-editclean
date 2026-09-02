@@ -5,7 +5,7 @@
   "brands": {
     "claude": {
       "name": "Claude (Anthropic)",
-      "aliases": ["claude", "cloud", "fable", "opus", "sonnet", "haiku"],
+      "aliases": ["claude", "cloud", "fable", "mythos", "opus", "sonnet", "haiku"],
       "sources": [{"url": "https://claude.ai/favicon.svg", "kind": "svg"}],
       "color": "#D97757",
       "palette": {"bloom": [255, 98, 38], "halo": [255, 146, 78], "core": [242, 163, 126], "hot": [255, 236, 214]},

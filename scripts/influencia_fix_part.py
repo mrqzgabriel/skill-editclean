@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-EditClean - influencia_fix_part.py  (v2.9)
+EditClean - influencia_fix_part.py  (v3.0)
 
 Video que veio do influencIA (clipes do Veo com a voz trocada): quando a voz gerada
 PRONUNCIA ERRADO uma palavra (ou balbucia), a correcao certa nao e na edicao -- e na
 origem. Este script fecha o ciclo pela API de PRODUCAO do influencIA:
 
+  pron    fonemas IPA de cada parte (wav2vec2, scripts/phonemes.py): pega sotaque ingles
+          ("ciber" -> saɪb), numero engolido e "Mythos" sem s -- o que o transcritor esconde.
   check   baixa/usa as partes, transcreve cada uma com o whisper-1 da OpenAI (o mesmo
           transcritor que o sistema usa) e compara token a token com a COPIA de cada
           parte no banco. Classifica: OK / PRONUNCIA (palavra trocada) / BALBUCIO
@@ -142,6 +144,12 @@ class Api:
 
 
 def find_project(api, query):
+    # v3.0: id (uuid) vai direto em GET /projects/:id -- a lista e paginada e o projeto some da
+    # primeira pagina quando o radar cria outros (aconteceu com o Fable 5.1 em 01/09)
+    if re.fullmatch(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", (query or "").strip().lower()):
+        proj = api.project(query.strip())
+        if isinstance(proj, dict) and proj.get("id"):
+            return proj
     projs = api.projects()
     if isinstance(projs, dict):
         projs = projs.get("projects", [])
@@ -162,10 +170,16 @@ def _norm_str(s):
     return "".join(c for c in s if not unicodedata.combining(c))
 
 
+EQUIV = {"pra": "para", "pro": "para o", "mythos": "mitos", "mito": "mitos", "mytho": "mitos"}  # contracoes faladas e grafia falada (Mítos) nao sao pronuncia errada
+
+
 def tokens(s):
     out = []
     for t in re.findall(r"[a-z0-9]+", _norm_str(s)):
-        out.append(NUMEROS.get(t, t))
+        t = EQUIV.get(t, t)
+        if t == "__aceito__":
+            continue
+        out.extend(NUMEROS.get(x, x) for x in t.split())
     return out
 
 
@@ -190,15 +204,40 @@ def whisper1(env, path):
     return d
 
 
+NUMERIC = set(NUMEROS.keys()) | set(NUMEROS.values()) | {
+    "cem", "mil", "milhao", "milhoes", "bilhao", "bilhoes", "ponto", "virgula", "por", "cento", "dolar", "dolares",
+    "centavo", "centavos", "real", "reais", "us", "r", "mtok", "d"}
+
+
+FUNCTIONAL = {"do", "da", "de", "o", "a", "e", "que", "para", "em", "no", "na", "os", "as", "um", "uma", "ao", "pro"}
+
+
+def _is_numeric(t):
+    return t in NUMERIC or bool(re.fullmatch(r"[0-9]+[a-z]?", t))
+
+
 def diff_copy(copy_text, wh):
-    """Compara a copia com o que o whisper-1 ouviu. Devolve (classe, detalhe)."""
+    """Compara a copia com o que o whisper-1 ouviu. Devolve (classe, detalhe).
+    Numeros/dinheiro saem da comparacao: o whisper-1 devolve digitos ("US$ 4,53") e a copia vem por
+    extenso ("quatro dolares e cinquenta e tres") -- isso dava DIVERGE falso. Numero errado se pega
+    pelo fonema/ouvido, nao por esta diff."""
     a, b = tokens(copy_text), tokens(wh.get("text", ""))
+    a = [t for t in a if not _is_numeric(t)]
+    b = [t for t in b if not _is_numeric(t)]
     extra = [w for w in b if w not in a]
     missing = [w for w in a if w not in b]
     words = wh.get("words") or []
     dur = float(wh.get("duration") or 0)
     if not extra and not missing:
         return "OK", ""
+    # palavras funcionais (do/de/e/a...) a mais ou a menos nao sao pronuncia errada: o whisper-1
+    # engole o "e" de "cinquenta e tres" ao escrever "53" e a voz as vezes acrescenta um "do"
+    extra_f = [w for w in extra if w in FUNCTIONAL]
+    missing_f = [w for w in missing if w in FUNCTIONAL]
+    extra = [w for w in extra if w not in FUNCTIONAL]
+    missing = [w for w in missing if w not in FUNCTIONAL]
+    if not extra and not missing:
+        return "OK", "so palavras funcionais diferem (a mais %s, a menos %s)" % (extra_f, missing_f)
     # balbucio: muitos tokens a mais, concentrados depois do ultimo token da copia
     if len(extra) >= 6 and len(missing) <= 1:
         return "BALBUCIO", "%d palavras sem sentido alem da copia; fala vai ate %.1fs de %.1fs" % (
@@ -338,6 +377,41 @@ def cmd_fix(args):
         log("aviso do sistema: %s" % cur["errorMessage"])
 
 
+def cmd_pron(args):
+    """Fonemas (IPA) de cada parte, alinhados a copia: pega o que o transcritor esconde."""
+    sys.path.insert(0, HERE)
+    import phonemes as ph
+    env = load_env()
+    api = Api(env)
+    proj = find_project(api, args.project)
+    tmp = tempfile.mkdtemp(prefix="editclean-pron-")
+    flags = {"saɪb": "'ciber' lido como 'cyber' (ingles)", "eɪŋ": "nasal 'en/em' com ditongo ingles",
+             "ɹ": "r retroflexo (ingles)", "θ": "th ingles", "ð": "th ingles"}
+    out = []
+    for cp in sorted(proj.get("copyParts", []), key=lambda c: c["partNumber"]):
+        n = cp["partNumber"]
+        path = local_part_path(args.parts_dir, n)
+        if not path:
+            url = (cp.get("videoPart") or {}).get("finalVideoUrl")
+            if not url:
+                continue
+            path = download(url, os.path.join(tmp, "parte%d.mp4" % n))
+        ipa = ph.phonemes(path)
+        hits = [v for k, v in flags.items() if k in ipa]
+        if args.words:
+            for w in args.words:
+                pass
+        out.append({"part": n, "copy": cp["text"], "ipa": ipa, "flags": hits})
+        log("parte %d: %s" % (n, ipa))
+        log("   copia: %s" % cp["text"])
+        if hits:
+            log("   !! sinais de fonetica inglesa: %s" % "; ".join(hits))
+    shutil.rmtree(tmp, ignore_errors=True)
+    if args.report:
+        json.dump(out, open(args.report, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    print(json.dumps([(o["part"], o["flags"]) for o in out], ensure_ascii=False))
+
+
 def main():
     ap = argparse.ArgumentParser(description="influencIA: achar pronuncia errada e regenerar a parte")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -352,10 +426,19 @@ def main():
     p2.add_argument("--parts-dir", default=None, help="onde trocar parteN.mp4 (a antiga vira parteN_vK.mp4)")
     p2.add_argument("--tag", default="", help="sufixo do backup, ex.: derrugar")
     p2.add_argument("--retries", type=int, default=2, help="regeneracoes extras se ainda sair errado")
+    p2.add_argument("--accept", default="", help="palavras toleradas na reconferencia, separadas por virgula (ex.: mito,mytho)")
     p2.add_argument("--accept-babble", action="store_true",
                     help="aceitar BALBUCIO na reconferencia (copia curta, vai para o trim)")
+    p3 = sub.add_parser("pron", help="fonemas (IPA) de cada parte: sotaque ingles, numero engolido")
+    p3.add_argument("--project", required=True)
+    p3.add_argument("--parts-dir", default=None)
+    p3.add_argument("--words", nargs="*", default=None)
+    p3.add_argument("--report", default=None)
     args = ap.parse_args()
-    (cmd_check if args.cmd == "check" else cmd_fix)(args)
+    if getattr(args, "accept", ""):
+        for wd in [x.strip().lower() for x in args.accept.split(",") if x.strip()]:
+            EQUIV[_norm_str(wd)] = "__aceito__"
+    {"check": cmd_check, "fix": cmd_fix, "pron": cmd_pron}[args.cmd](args)
 
 
 if __name__ == "__main__":

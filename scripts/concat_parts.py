@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-EditClean - concat_parts.py  (v2.7)
+EditClean - concat_parts.py  (v3.0)
 
 Video que chega EM TRECHOS (clipes de ~8 s do Veo / influencIA, partes numeradas):
 corta o ar morto do FIM e do COMECO de cada trecho e junta tudo num master,
@@ -214,16 +214,42 @@ def main():
                     help="segundos a MAIS depois da ultima palavra so na ULTIMA parte, para o fade "
                          "de encerramento nao apagar a fala (v2.8: use ~1.4 quando closing.fade_out)")
     ap.add_argument("--overwrite", action="store_true")
+    ap.add_argument("--include-backups", action="store_true",
+                    help="incluir parteN_vK_*.mp4 (por padrao backups do fix sao ignorados)")
     args = ap.parse_args()
 
     if not FFMPEG or not FFPROBE:
         raise SystemExit("ffmpeg/ffprobe nao encontrados")
     parts = list(args.parts)
     if args.dir:
-        parts += glob.glob(os.path.join(args.dir, args.pattern))
+        found = glob.glob(os.path.join(args.dir, args.pattern))
+        # v3.0: backups do influencia_fix_part (parteN_v1_<tag>.mp4) ficam na MESMA pasta e o
+        # glob parte*.mp4 os pegava -> trechos duplicados no master (aconteceu 01/09). So entram
+        # arquivos <prefixo><numero>.mp4; o resto e listado e ignorado.
+        keep, skipped = [], []
+        for f in found:
+            bn = os.path.basename(f)
+            if re.search(r"_v\d+", bn) or re.search(r"_(bak|old|backup)", bn, re.I):
+                skipped.append(bn)
+            else:
+                keep.append(f)
+        if skipped and not args.include_backups:
+            log("ignorando %d backup(s): %s" % (len(skipped), ", ".join(sorted(skipped))))
+            parts += keep
+        else:
+            parts += found
     parts = sorted({os.path.abspath(p) for p in parts}, key=natural_key)
     if not parts:
         raise SystemExit("nenhuma parte informada")
+    nums = [re.findall(r"(\d+)", os.path.basename(p)) for p in parts]
+    seen = {}
+    for p, n in zip(parts, nums):
+        key = n[0] if n else os.path.basename(p)
+        if key in seen:
+            raise SystemExit("duas partes com o mesmo numero (%s): %s e %s -- tire o backup da pasta ou use --include-backups"
+                             % (key, os.path.basename(seen[key]), os.path.basename(p)))
+        seen[key] = p
+    log("partes: " + ", ".join(os.path.basename(p) for p in parts))
     if os.path.exists(args.out) and not args.overwrite:
         raise SystemExit("saida ja existe (use --overwrite): %s" % args.out)
     overrides = {}
