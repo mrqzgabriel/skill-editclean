@@ -82,8 +82,85 @@ def normalize_tokens(words):
                              "end": float(words[i + 1]["end"])})
                 i += 2
                 continue
+            # v3.1 (03/09, video Apple): numero + unidade viram UM token ("512 GB", "1,2 TB") --
+            # senao o bloco fecha entre o numero e a unidade ("com ate 512" / "GB de memoria")
+            unit = nxt.rstrip(".,;:!?")
+            if re.fullmatch(r"\d+([.,]\d+)?", txt) and unit in ("GB", "TB", "MB", "KB", "PB", "GHz", "MHz", "ms", "km",
+                                                                   "kg", "cm", "mm", "W", "kW", "kWh", "fps", "px"):
+                toks.append({"text": txt + " " + nxt, "start": float(cur["start"]),
+                             "end": float(words[i + 1]["end"])})
+                i += 2
+                continue
         toks.append({"text": txt, "start": float(cur["start"]), "end": float(cur["end"])})
         i += 1
+
+    # v3.3 (Gabriel 04/09): NUMERO POR EXTENSO vira DIGITO na legenda. A copia do
+    # influencIA e guardada por extenso desde 03/09 ("criou seis projetos"), o whisper
+    # transcreve a palavra, e a legenda mostrava "seis" em vez de "6". Regras:
+    #  - "um"/"uma" SOZINHO nunca vira 1 (e artigo: "um pedido aberto")
+    #  - compostos com "e" juntam num token so ("cento e vinte e oito" -> 128)
+    #  - escala fica por extenso ("128 milhoes"), que e como se escreve
+    #  - "<n> mil e <n>" vira inteiro (ano: "dois mil e vinte e seis" -> 2026);
+    #    "<n> mil" sozinho fica "<n> mil"
+    _UNI = {"zero": 0, "um": 1, "uma": 1, "dois": 2, "duas": 2, "tres": 3, "quatro": 4,
+            "cinco": 5, "seis": 6, "sete": 7, "oito": 8, "nove": 9, "dez": 10, "onze": 11,
+            "doze": 12, "treze": 13, "quatorze": 14, "catorze": 14, "quinze": 15,
+            "dezesseis": 16, "dezessete": 17, "dezoito": 18, "dezenove": 19}
+    _DEZ = {"vinte": 20, "trinta": 30, "quarenta": 40, "cinquenta": 50, "sessenta": 60,
+            "setenta": 70, "oitenta": 80, "noventa": 90}
+    _CEM = {"cem": 100, "cento": 100, "duzentos": 200, "duzentas": 200, "trezentos": 300,
+            "trezentas": 300, "quatrocentos": 400, "quatrocentas": 400, "quinhentos": 500,
+            "quinhentas": 500, "seiscentos": 600, "seiscentas": 600, "setecentos": 700,
+            "setecentas": 700, "oitocentos": 800, "oitocentas": 800, "novecentos": 900,
+            "novecentas": 900}
+
+    def _w(k):
+        if k >= len(toks):
+            return ""
+        return _strip_accents(toks[k]["text"].strip().rstrip(".,;:!?").lower())
+
+    def _read_below_1000(k):
+        """Le [centena] [e] [dezena] [e] [unidade] a partir de k. -> (valor, prox_k)."""
+        total, k0, got = 0, k, False
+        if _w(k) == "cento" and not (_w(k + 1) == "e" and (_w(k + 2) in _DEZ or _w(k + 2) in _UNI)):
+            return (None, k)          # "por cento" nao e o numero 100
+        if _w(k) in _CEM:
+            total += _CEM[_w(k)]; k += 1; got = True
+            if _w(k) == "e" and (_w(k + 1) in _DEZ or _w(k + 1) in _UNI):
+                k += 1
+        if _w(k) in _DEZ:
+            total += _DEZ[_w(k)]; k += 1; got = True
+            if _w(k) == "e" and _w(k + 1) in _UNI:
+                k += 1
+        if _w(k) in _UNI and not (total >= 100 and total % 100 == 0 and _w(k) in ("um", "uma") and k == k0):
+            total += _UNI[_w(k)]; k += 1; got = True
+        return (total, k) if got else (None, k0)
+
+    conv, i = [], 0
+    while i < len(toks):
+        if (_w(i) == "por" and _w(i + 1) == "cento" and conv
+                and re.fullmatch(r"\d+", conv[-1]["text"].rstrip(".,;:!?"))):
+            last = toks[i + 1]["text"].strip()
+            punct = last[len(last.rstrip(".,;:!?")):]
+            conv[-1]["text"] = conv[-1]["text"].rstrip(".,;:!?") + "%" + punct
+            conv[-1]["end"] = float(toks[i + 1]["end"])
+            i += 2
+            continue
+        val, j = _read_below_1000(i)
+        if val is not None and _w(j) == "mil" and _w(j + 1) == "e":
+            v2, j2 = _read_below_1000(j + 2)
+            if v2 is not None:
+                val, j = val * 1000 + v2, j2
+        # "um"/"uma" sozinho e artigo, nao numeral
+        if val is None or (j - i == 1 and _w(i) in ("um", "uma")):
+            conv.append(toks[i]); i += 1
+            continue
+        last = toks[j - 1]["text"].strip()
+        punct = last[len(last.rstrip(".,;:!?")):]
+        conv.append({"text": "%d%s" % (val, punct), "start": float(toks[i]["start"]),
+                     "end": float(toks[j - 1]["end"])})
+        i = j
+    toks = conv
 
     # v2.17 (Gabriel 01/09): dinheiro na LEGENDA em digitos -- a voz fala "dez dolares" /
     # "quatro dolares e cinquenta e tres", a legenda mostra "US$ 10" / "US$ 4,53"
@@ -136,6 +213,7 @@ def normalize_tokens(words):
             continue
         merged.append(t); i += 1
     toks = merged
+
 
     out = []
     for t in toks:
@@ -616,8 +694,28 @@ class TextMeasure(object):
             nch += len(txt)
             if k:
                 fb = self.font("normal", fs)
-                tot += (fb.getlength(" ") if fb else fs * 0.28) * self.space_scale
+                base = fb.getlength(" ") if fb else fs * 0.28
+                # v3.2: o espaco acompanha o MAIOR dos dois vizinhos. Com
+                # word_space_scale 0,55 medido sempre no corpo, a fronteira corpo ->
+                # serifada (1,55x) ficava colada -- "A Anthropic" saia "AAnthropic".
+                big = style == "accent" or items[k - 1][0] == "accent"
+                tot += base * self.space_scale * (self.accent_ratio if big else 1.0)
         return tot + self.track * nch
+
+
+def _closing_fade(prof, segs, blocks):
+    """v3.3: o fade de encerramento nunca dura mais que a cauda MUDA que existe depois
+    da ultima palavra. Antes o fade era fixo em 1,0 s e a cauda era 1,4 s: sobrava
+    ~1 s de boca mexendo em silencio digital, que o Gabriel leu como "audio
+    dessincronizado no fim". Piso de 0,45 s para continuar sendo um fade, nao um corte."""
+    base = float(prof["closing"].get("fade_out_s", 1.0))
+    if not segs or not blocks:
+        return base
+    out_dur = float(segs[-1]["out_start"]) + float(segs[-1]["duration"])
+    tail = out_dur - float(blocks[-1]["end"])
+    if tail <= 0:
+        return base
+    return round(max(0.45, min(base, tail)), 3)
 
 
 def group_blocks(toks, spans, prof):
@@ -840,7 +938,15 @@ def build_captions(toks, spans, segs, total, prof, W, H, src2out, seg_of,
                 k += 1
 
         first, last = toks[g[0]], toks[g[-1]]
-        sl = seg_of(last["start"])
+        # v3.1 (03/09): o fim do bloco e limitado pelo segmento onde a ultima palavra TERMINA.
+        # Antes usava o segmento onde ela COMECA: um corte de zoom 12 ms depois do inicio de
+        # "SpaceX" fechava o bloco junto com a palavra e ela nao aparecia na legenda.
+        sl = seg_of(min(last["end"], toks[g[-1]]["end"])) or seg_of(last["start"])
+        if sl["src_start"] > last["start"] + 1e-6 and seg_of(last["start"]) is not sl:
+            # a palavra atravessa um corte: so vale se os segmentos sao contiguos (nada removido)
+            sa = seg_of(last["start"])
+            if abs(sa["src_end"] - sl["src_start"]) > 1e-3:
+                sl = sa
         b_start = src2out(max(first["start"], seg_of(first["start"])["src_start"]))
         b_end = src2out(min(last["end"] + 0.30, sl["src_end"]))
         blocks.append({
@@ -1341,20 +1447,16 @@ def main():
                     print("[plan] AVISO: transicao %.2f-%.2f dentro do cartao "
                           "central -- confira no rascunho" % (ta, tb))
 
-            # componente imagem+legenda centrado na vertical
+            # componente imagem+legenda centrado na vertical.
+            # v3.1 (03/09): a imagem cabe numa caixa (largura max x img_h) mantendo a
+            # proporcao -- a altura REAL exibida e a que entra na conta do centro e da
+            # ancora da legenda. Antes usava img_h fixo: imagem mais larga que alta
+            # (print de docs) saia com ~800 px e a legenda ficava ~300 px abaixo dela.
             img_h = int(round(float(cc.get("img_height_pct", 0.578)) * H))
             gap = int(round(float(cc.get("gap_px_at_1920", 34)) * H / 1920.0))
             top_min = int(round(float(cc.get("top_min_px_at_1920", 60)) * H / 1920.0))
-            cap_h = 0
-            if card_blocks:
-                fs_max = max(b["font_size_px"] for b in card_blocks)
-                cap_h = int(round(2 * fs_max * lh)) + gap
-            top = max(top_min, (H - (img_h + cap_h)) // 2)
-            if card_blocks:
-                footer_anchor_pct = round((top + img_h + gap) / float(H), 4)
-                for b in card_blocks:
-                    b["anchor"] = "footer"
-
+            w_cap = int(prof["graphics_overlays"]["safe_margins"]["max_width_pct"] * W)
+            dims = {}
             for o in grp:
                 try:
                     from PIL import Image
@@ -1362,11 +1464,25 @@ def main():
                 except Exception:
                     iw3, ih3 = 3, 4
                 w_disp = int(round(img_h * iw3 / float(ih3)))
-                w_cap = int(prof["graphics_overlays"]["safe_margins"]["max_width_pct"] * W)
                 w_disp = min(w_disp, w_cap) // 2 * 2
+                h_disp = int(round(w_disp * ih3 / float(iw3)))
+                dims[o["id"]] = (w_disp, h_disp)
+            h_grp = max(h for _, h in dims.values())
+            cap_h = 0
+            if card_blocks:
+                fs_max = max(b["font_size_px"] for b in card_blocks)
+                cap_h = int(round(2 * fs_max * lh)) + gap
+            top = max(top_min, (H - (h_grp + cap_h)) // 2)
+            if card_blocks:
+                footer_anchor_pct = round((top + h_grp + gap) / float(H), 4)
+                for b in card_blocks:
+                    b["anchor"] = "footer"
+
+            for o in grp:
+                w_disp, h_disp = dims[o["id"]]
                 o["params"]["mode"] = "center_card"
                 o["params"]["pos"] = {"x_pct": round((1 - w_disp / float(W)) / 2, 4),
-                                      "y_pct": round(top / float(H), 4),
+                                      "y_pct": round((top + h_grp - h_disp) / float(H), 4),  # base alinhada a legenda
                                       "w_pct": round(w_disp / float(W), 4)}
                 o["params"]["mask"] = "rounded_rect"
                 o["params"]["corner_radius_pct"] = float(cc.get("corner_radius_pct", 0.03))
@@ -1484,9 +1600,10 @@ def main():
                     "easing": prof["opening"]["easing"],
                     "confidence": 92, "origin": "inferred"},
         "closing": ({"enabled": True, "type": "fade_out",
-                     "duration": float(prof["closing"].get("fade_out_s", 1.0)),
-                     "audio_duration": float(prof["closing"].get("audio_fade_s",
-                                                                 prof["closing"].get("fade_out_s", 1.0))),
+                     "duration": _closing_fade(prof, segs, blocks),
+                     "audio_duration": min(float(prof["closing"].get("audio_fade_s",
+                                                                     prof["closing"].get("fade_out_s", 1.0))),
+                                           _closing_fade(prof, segs, blocks) + 0.30),
                      "confidence": 90, "origin": "inferred"}
                     if prof["closing"].get("fade_out") else
                     {"enabled": True, "type": "hard_cut", "duration": 0.0,

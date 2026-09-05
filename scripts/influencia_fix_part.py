@@ -62,7 +62,11 @@ NUMEROS = {"zero": "0", "um": "1", "uma": "1", "dois": "2", "duas": "2", "tres":
            "doze": "12", "treze": "13", "catorze": "14", "quatorze": "14", "quinze": "15", "dezesseis": "16",
            "dezessete": "17", "dezoito": "18", "dezenove": "19", "vinte": "20", "trinta": "30",
            "quarenta": "40", "cinquenta": "50", "sessenta": "60", "setenta": "70", "oitenta": "80",
-           "noventa": "90", "cem": "100", "mil": "1000"}
+           "noventa": "90", "cem": "100", "cento": "100", "duzentos": "200", "duzentas": "200", "trezentos": "300",
+           "trezentas": "300", "quatrocentos": "400", "quatrocentas": "400", "quinhentos": "500", "quinhentas": "500",
+           "seiscentos": "600", "seiscentas": "600", "setecentos": "700", "setecentas": "700", "oitocentos": "800",
+           "oitocentas": "800", "novecentos": "900", "novecentas": "900", "mil": "1000", "milhao": "1000000",
+           "milhoes": "1000000", "bilhao": "1000000000", "bilhoes": "1000000000"}   # v3.1: centenas faltavam -> falso DIVERGE "quinhentos"
 
 
 def log(msg):
@@ -412,6 +416,77 @@ def cmd_pron(args):
     print(json.dumps([(o["part"], o["flags"]) for o in out], ensure_ascii=False))
 
 
+def cmd_audio(args):
+    """PROIBIDO desde 04/09/2026 (v3.5). Pedido do Gabriel, com estas palavras: "eu nao quero que
+    regenere apenas o audio, e pra regenerar o trecho. pois se so regenerar o audio vai ficar com
+    a voz desincronizada". Trocar so a voz mantem o VIDEO do take antigo: a boca continua
+    desenhando os fonemas da fala velha e a nova nao encaixa. Regenere a PARTE INTEIRA com
+    `fix` (ou `regen_gate.py`), que refaz video e voz juntos."""
+    raise SystemExit(
+        "PROIBIDO: regenerar so o audio (generate-audio) deixa a voz dessincronizada da boca.\n"
+        "Regenere o trecho inteiro:\n"
+        "  python3 influencia_fix_part.py fix --project <id> --part <N> --parts-dir <dir> [--text ...]\n"
+        "  ou regen_gate.py, que roda o fix com portao de fonema.")
+
+
+def _cmd_audio_desativado(args):
+    env = load_env()
+    api = Api(env)
+    proj = find_project(api, args.project)
+    cps = {c["partNumber"]: c for c in proj.get("copyParts", [])}
+    for wd in [x.strip().lower() for x in (args.accept or "").split(",") if x.strip()]:
+        EQUIV[_norm_str(wd)] = "__aceito__"
+    for n in args.parts:
+        if n not in cps:
+            raise SystemExit("parte %d nao existe no projeto" % n)
+        cp = cps[n]
+        vp = cp.get("videoPart") or {}
+        if not vp.get("id") or not vp.get("videoUrl"):
+            raise SystemExit("parte %d ainda nao tem video do Veo" % n)
+        old_md5 = None
+        old = local_part_path(args.parts_dir, n)
+        if old:
+            old_md5 = subprocess.run([_ffmpeg(), "-v", "error", "-i", old, "-map", "0:a", "-f", "md5", "-"],
+                                     stdout=subprocess.PIPE).stdout.decode().strip()
+        log("parte %d: refazendo so a voz (video-part %s)" % (n, vp["id"]))
+        t0 = time.time()
+        r = api._req("POST", "/video-parts/%s/generate-audio" % vp["id"], {}, timeout=600)
+        st = r.get("status")
+        while st in ("audio_replacing", "generating") and time.time() - t0 < POLL_MAX_S:
+            time.sleep(10)
+            r = api.video_part(vp["id"])
+            st = r.get("status")
+        if r.get("errorMessage") or not r.get("finalVideoUrl"):
+            raise SystemExit("parte %d: voz nao trocada: %s" % (n, r.get("errorMessage")))
+        tmp = tempfile.mkdtemp(prefix="editclean-voz-")
+        new_path = download(r["finalVideoUrl"], os.path.join(tmp, "parte%d.mp4" % n))
+        new_md5 = subprocess.run([_ffmpeg(), "-v", "error", "-i", new_path, "-map", "0:a", "-f", "md5", "-"],
+                                 stdout=subprocess.PIPE).stdout.decode().strip()
+        if old_md5 and old_md5 == new_md5:
+            log("   AVISO: o audio novo e IDENTICO ao antigo (md5) -- a ElevenLabs nao trocou nada?")
+        wh = whisper1(env, new_path)
+        cls, detail = diff_copy(cp["text"], wh)
+        log("   %.0fs | reconferencia whisper-1: [%s] %s\n   ouviu: %s" % (time.time() - t0, cls, detail, wh.get("text", "").strip()))
+        if args.parts_dir:
+            if old:
+                bak = backup_name(args.parts_dir, n, args.tag or "voz")
+                shutil.move(old, bak)
+                log("   antiga guardada em %s" % bak)
+            dest = os.path.join(args.parts_dir, "parte%d.mp4" % n)
+            shutil.copyfile(new_path, dest)
+            log("   nova parte em %s" % dest)
+            print(dest)
+        else:
+            print(new_path)
+
+
+def _ffmpeg():
+    for c in (shutil.which("ffmpeg"), os.path.expanduser("~/.local/tools/ffmpeg"), "/opt/homebrew/bin/ffmpeg"):
+        if c and os.path.isfile(c):
+            return c
+    raise SystemExit("ffmpeg nao encontrado")
+
+
 def main():
     ap = argparse.ArgumentParser(description="influencIA: achar pronuncia errada e regenerar a parte")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -434,11 +509,17 @@ def main():
     p3.add_argument("--parts-dir", default=None)
     p3.add_argument("--words", nargs="*", default=None)
     p3.add_argument("--report", default=None)
+    p4 = sub.add_parser("audio", help="so a troca de voz (ElevenLabs) sobre o video do Veo ja gerado")
+    p4.add_argument("--project", required=True)
+    p4.add_argument("--parts", type=int, nargs="+", required=True, help="numeros das partes, ex.: 16 18")
+    p4.add_argument("--parts-dir", default=None)
+    p4.add_argument("--tag", default="voz")
+    p4.add_argument("--accept", default="")
     args = ap.parse_args()
-    if getattr(args, "accept", ""):
+    if getattr(args, "accept", "") and args.cmd != "audio":
         for wd in [x.strip().lower() for x in args.accept.split(",") if x.strip()]:
             EQUIV[_norm_str(wd)] = "__aceito__"
-    {"check": cmd_check, "fix": cmd_fix, "pron": cmd_pron}[args.cmd](args)
+    {"check": cmd_check, "fix": cmd_fix, "pron": cmd_pron, "audio": cmd_audio}[args.cmd](args)
 
 
 if __name__ == "__main__":

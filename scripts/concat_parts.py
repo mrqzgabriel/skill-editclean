@@ -24,7 +24,7 @@ O script imprime a transcricao de cada parte e o avg_logprob do Whisper:
 avg_logprob muito baixo (< -0,8) e sinal de BALBUCIO da voz gerada -- ouca o
 trecho e use --overrides. Nunca confie so no numero.
 
-Saida: master .mp4 (cada parte re-encodada crf 12 e o concat SEM re-encode),
+Saida: master .mp4 (v3.5: UMA passagem com o filtro concat, corte no grid de quadros, audio continuo),
 mais um report JSON com o que foi decidido por parte.
 
 Uso:
@@ -54,6 +54,12 @@ TAIL_PAD = 0.15           # fim = ultima palavra + 0,15
 TAIL_EXTEND_MAX = 0.60    # protecao extra: estende ate o silencio, no maximo isso
 NOSPEECH_TRAIL = 0.05
 NOSPEECH_FALLBACK = 0.50
+# v3.3 (04/09, "o comeco ta esquisito" / "audio dessincronizado no fim")
+SIL_MERGE_GAP = 0.08      # silencios separados por menos que isso sao UM silencio
+LEAD_SIL_START = 0.20     # silencio que comeca antes disso conta como ar morto do inicio
+FALSE_START_MAX = 0.25    # 1a emissao mais curta que isso...
+FALSE_START_GAP = 0.35    # ...seguida de pausa maior que isso = falso comeco
+TAIL_CLAMP = 0.28         # nunca deixar mais que isso de video depois que a energia cai
 BABBLE_LOGPROB = -0.80    # abaixo disso: provavel balbucio, avisar
 
 
@@ -150,25 +156,69 @@ def transcribe(wav, language, model_size):
             "avg_logprob": (lp_num / lp_den) if lp_den else None}
 
 
-def decide_cut(duration, words, silences):
+def merge_silences(silences, gap=SIL_MERGE_GAP, duration=None):
+    """Junta silencios separados por menos que `gap` (um clique de 11 ms entre dois
+    silencios fazia o ar morto do inicio passar despercebido)."""
+    out = []
+    for s in sorted(silences, key=lambda x: x["start"]):
+        e = duration if (s["end"] == float("inf") and duration) else s["end"]
+        if out and s["start"] - out[-1]["end"] <= gap:
+            out[-1]["end"] = max(out[-1]["end"], e)
+        else:
+            out.append({"start": s["start"], "end": e})
+    return out
+
+
+def decide_cut(duration, words, silences, is_last=False, false_start=True):
     """Regra do influencIA + protecao do fim. Devolve (start, end, detalhe)."""
+    sil = merge_silences(silences, duration=duration)
     if words:
         first, last = words[0], words[-1]
-        lead = next((s for s in silences if s["start"] < 0.05 and s["end"] <= first["start"] + 0.2), None)
-        start = max(lead["end"] - LEAD_PAD, 0.0) if lead else max(first["start"] - LEAD_NO_SIL, 0.0)
+        detail = "whisper %.2f-%.2f" % (first["start"], last["end"])
+
+        # ---- COMECO (v3.3) ----
+        # O whisper costuma cravar a 1a palavra em 0,00 mesmo quando a fala so
+        # comeca depois; quem sabe a verdade e o silencio MEDIDO. Antes a regra
+        # exigia silencio comecando em < 0,05 s e o ar morto passava batido.
+        lead = next((x for x in sil if x["start"] < LEAD_SIL_START
+                     and x["end"] > first["start"] + 0.02), None)
+        if lead:
+            start = max(lead["end"] - LEAD_PAD, 0.0)
+            detail += " | inicio pelo silencio medido (ar morto ate %.2f)" % lead["end"]
+        else:
+            start = max(first["start"] - LEAD_NO_SIL, 0.0)
+
+        # falso comeco: silaba solta e curta + pausa longa ("A ....... Anthropic")
+        if false_start:
+            nxt = next((x for x in sil if x["start"] >= start), None)
+            if (nxt and nxt["start"] - start <= FALSE_START_MAX
+                    and (nxt["end"] - nxt["start"]) >= FALSE_START_GAP and nxt["end"] < duration - 0.5):
+                detail += " | FALSO COMECO: silaba de %.2fs + pausa de %.2fs cortadas" % (
+                    nxt["start"] - start, nxt["end"] - nxt["start"])
+                start = max(nxt["end"] - LEAD_PAD, 0.0)
+
+        # ---- FIM ----
         end = min(last["end"] + TAIL_PAD, duration)
-        detail = "whisper %.2f-%.2f -> %.2f-%.2f" % (first["start"], last["end"], start, end)
         # protecao: se em `end` a energia ainda nao caiu, anda ate o silencio seguinte
-        inside = any(s["start"] <= end <= s["end"] for s in silences)
+        inside = any(x["start"] <= end <= x["end"] for x in sil)
         if not inside:
-            nxt = [s for s in silences if last["end"] - 0.10 <= s["start"] <= last["end"] + TAIL_EXTEND_MAX]
-            if nxt:
-                end2 = min(nxt[0]["start"] + NOSPEECH_TRAIL, duration)
+            nx = [x for x in sil if last["end"] - 0.10 <= x["start"] <= last["end"] + TAIL_EXTEND_MAX]
+            if nx:
+                end2 = min(nx[0]["start"] + NOSPEECH_TRAIL, duration)
                 if end2 > end:
-                    detail += " | fala continuava, fim -> %.2f (silencio em %.2f)" % (end2, nxt[0]["start"])
+                    detail += " | fala continuava, fim -> %.2f (silencio em %.2f)" % (end2, nx[0]["start"])
                     end = end2
             else:
                 detail += " | AVISO: sem silencio medido apos a ultima palavra"
+        # v3.3: o timestamp da ULTIMA palavra costuma esticar ate 0,5 s alem do audio
+        # real. Sem trava, a ultima parte ficava com ~1 s de boca mexendo em silencio
+        # digital ("audio dessincronizado no fim"). Corta pelo silencio medido.
+        tail_sil = next((x for x in sil if x["start"] >= last["start"]
+                         and x["end"] >= duration - 0.20), None)
+        if tail_sil and end > tail_sil["start"] + TAIL_CLAMP:
+            detail += " | fim travado no silencio medido (%.2f -> %.2f)" % (
+                end, tail_sil["start"] + TAIL_CLAMP)
+            end = tail_sil["start"] + TAIL_CLAMP
         return start, end, detail
     trailing = None
     for s in reversed(silences):
@@ -181,21 +231,87 @@ def decide_cut(duration, words, silences):
     return 0.0, max(duration - NOSPEECH_FALLBACK, 0.1), "sem fala, sem silencio final, fallback -0,5 s"
 
 
-def encode_segment(src, dest, start, end, fps, scale=None):
-    dur = end - start
-    af = "afade=t=in:st=0:d=0.012,afade=t=out:st=%.4f:d=0.012" % max(0.0, dur - 0.012)
-    vf = ["scale=%s:flags=lanczos" % scale] if scale else []
-    vf.append("setsar=1")
-    cmd = [FFMPEG, "-hide_banner", "-loglevel", "error", "-y",
-           "-ss", "%.4f" % start, "-i", src, "-t", "%.4f" % dur,
-           "-vf", ",".join(vf), "-af", af,
-           "-r", "%g" % fps, "-c:v", "libx264", "-crf", "12", "-preset", "slow",
-           "-pix_fmt", "yuv420p", "-profile:v", "high",
-           "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2",
-           "-video_track_timescale", "90000", "-movflags", "+faststart", dest]
+def _snap(start, end, fps, duration):
+    """v3.5 (04/09/2026): fronteiras no GRID DE QUADROS. Com '-ss/-t' em tempo livre, o video saia
+    arredondado para cima (corte de 6,690 s virava 161 quadros = 6,708 s) e o audio ficava exato;
+    a juncao alinhava a peca seguinte pelo video e sobrava um buraco no audio em cada fronteira."""
+    s = round(start * fps) / fps
+    last = int(duration * fps + 1e-6) / fps
+    e = min(round(end * fps) / fps, last)
+    if e - s < 2.0 / fps:
+        e = min(s + 2.0 / fps, last)
+    return s, e
+
+
+def _build_master(cuts, out, fps, scale):
+    """v3.5: video e audio decodificados, cortados no grid de quadros, concatenados como fluxos
+    CONTINUOS pelo filtro concat e encodados UMA vez, com o audio de cada parte RECARIMBADO
+    (ver comentario no loop). Antes: '-ss/-t' por peca + '-f concat -c copy' preservava o salto
+    falso de timestamp que cada parte do influencIA traz (~80 ms a ~5,1 s); o atrim do render,
+    que corta por timestamp, perdia ~80 ms de audio em cada parte e a voz adiantava em degraus
+    (+0,42 s no fim do GPT-6 Astra). Regra 18 do SKILL.md."""
+    cmd = [FFMPEG, "-hide_banner", "-loglevel", "error", "-y"]
+    for src, _, _ in cuts:
+        cmd += ["-i", src]
+    parts, labels = [], ""
+    for k, (src, s, e) in enumerate(cuts):
+        d = e - s
+        vf = ["trim=start=%.6f:end=%.6f" % (s, e), "setpts=PTS-STARTPTS"]
+        if scale:
+            vf.append("scale=%s:flags=lanczos" % scale)
+        vf += ["setsar=1", "fps=%g" % fps, "format=yuv420p"]
+        parts.append("[%d:v]%s[v%d]" % (k, ",".join(vf), k))
+        # v3.5 (04/09/2026): as PARTES do influencIA chegam com um SALTO FALSO de timestamp no
+        # audio a ~5,1 s de cada clipe (372 pacotes AAC = 7,915 s de amostras continuas num fluxo
+        # carimbado com 8,016 s). Medido com lipsync por metade: o audio corrido por amostras casa
+        # com a boca (-0,04/-0,04 s); honrar o timestamp (silencio no salto) desalinha a 2a metade
+        # (ate -0,42 s). Entao: recarimbar CONTINUO a partir de 0 (asetpts=N/SR/TB) ANTES do atrim,
+        # e completar com silencio so no FIM (apad) para o audio ter exatamente a duracao do video.
+        af = ["asetpts=N/SR/TB",
+              "atrim=start=%.6f:end=%.6f" % (s, e), "asetpts=PTS-STARTPTS",
+              "aresample=48000", "aformat=sample_fmts=fltp:channel_layouts=stereo",
+              "apad=whole_dur=%.6f" % d, "atrim=end=%.6f" % d,
+              "afade=t=in:st=0:d=0.012", "afade=t=out:st=%.6f:d=0.012" % max(0.0, d - 0.012)]
+        parts.append("[%d:a]%s[a%d]" % (k, ",".join(af), k))
+        labels += "[v%d][a%d]" % (k, k)
+    parts.append("%sconcat=n=%d:v=1:a=1[v][a]" % (labels, len(cuts)))
+    cmd += ["-filter_complex", ";".join(parts), "-map", "[v]", "-map", "[a]",
+            "-r", "%g" % fps, "-c:v", "libx264", "-crf", "12", "-preset", "slow",
+            "-pix_fmt", "yuv420p", "-profile:v", "high",
+            "-c:a", "aac", "-b:a", "256k", "-ar", "48000", "-ac", "2",
+            "-video_track_timescale", "90000", "-movflags", "+faststart", out]
     rc, _, err = run(cmd)
     if rc != 0:
-        raise SystemExit("ffmpeg (trecho) falhou em %s: %s" % (src, err.strip()[-400:]))
+        raise SystemExit("ffmpeg (master) falhou: %s" % err.strip()[-600:])
+
+
+def _verify_master(out, fps):
+    """Trava do v3.5: recusa master cujo audio DECODIFICADO nao tem a mesma duracao do video.
+    Conta amostras decodificadas (s16le mono) -- duracao de pacote no MP4 nao serve: o muxer
+    'estica' o pacote anterior a um buraco e a soma das duracoes bate com o span mesmo faltando
+    0,6 s de amostras (foi assim que o GPT-6 Astra passou). Tambem lista pacotes esticados."""
+    rc, o, _ = run([FFPROBE, "-v", "error", "-select_streams", "v:0",
+                    "-show_entries", "stream=nb_frames", "-of", "csv=p=0", out])
+    nb = int((o.strip().split(",") or ["0"])[0] or 0)
+    vdur = nb / fps
+    p = subprocess.run([FFMPEG, "-v", "error", "-i", out, "-vn", "-ac", "1", "-ar", "48000",
+                        "-f", "s16le", "-"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    samples = len(p.stdout) / 2.0 / 48000.0
+    rc, o, _ = run([FFPROBE, "-v", "error", "-select_streams", "a:0",
+                    "-show_entries", "packet=pts_time,duration_time", "-of", "csv=p=0", out])
+    stretched = []
+    for line in o.strip().splitlines():
+        f = [x for x in line.split(",") if x != ""]
+        if len(f) >= 2 and float(f[1]) > 1.5 * 1024.0 / 48000.0:
+            stretched.append((round(float(f[0]), 3), round(float(f[1]), 4)))
+    diff = samples - vdur
+    log("master A/V: video %d quadros = %.3f s | audio decodificado %.3f s | diferenca %+.3f s | pacotes esticados %d"
+        % (nb, vdur, samples, diff, len(stretched)))
+    if stretched or abs(diff) > 0.05:
+        raise SystemExit("master com A/V desalinhado (audio - video = %+.3f s; %d pacote(s) esticado(s) %s). "
+                         "Isso dessincroniza a voz no render; nao siga." % (diff, len(stretched), stretched[:6]))
+    return {"video_s": round(vdur, 3), "audio_decoded_s": round(samples, 3), "diff_s": round(diff, 3),
+            "stretched_packets": len(stretched)}
 
 
 def main():
@@ -210,6 +326,8 @@ def main():
     ap.add_argument("--language", default="pt")
     ap.add_argument("--model", default="small")
     ap.add_argument("--report", default=None)
+    ap.add_argument("--no-false-start", action="store_true",
+                    help="nao cortar silaba solta + pausa longa no comeco da parte")
     ap.add_argument("--last-tail-extra", type=float, default=0.0,
                     help="segundos a MAIS depois da ultima palavra so na ULTIMA parte, para o fade "
                          "de encerramento nao apagar a fala (v2.8: use ~1.4 quando closing.fade_out)")
@@ -257,7 +375,7 @@ def main():
         overrides = json.load(open(args.overrides, encoding="utf-8"))
 
     tmp = tempfile.mkdtemp(prefix="editclean-partes-")
-    report, seg_files, fps_ref = [], [], None
+    report, cuts, fps_ref = [], [], None
     kept_idx = [i for i, p in enumerate(parts) if not overrides.get(os.path.basename(p), {}).get("skip")]
     last_idx = kept_idx[-1] if kept_idx else -1
     log("%d parte(s)" % len(parts))
@@ -276,7 +394,8 @@ def main():
         extract_wav(src, wav)
         silences = detect_silence(wav)
         tr = transcribe(wav, args.language, args.model)
-        start, end, detail = decide_cut(info["duration"], tr["words"], silences)
+        start, end, detail = decide_cut(info["duration"], tr["words"], silences,
+                                        is_last=(i == last_idx), false_start=not args.no_false_start)
         if "start" in ov:
             start, detail = float(ov["start"]), detail + " | start por override=%.2f" % float(ov["start"])
         if "end" in ov:
@@ -287,6 +406,7 @@ def main():
             end = end2
         start = max(0.0, min(start, info["duration"] - 0.1))
         end = max(start + 0.1, min(end, info["duration"]))
+        start, end = _snap(start, end, fps_ref, info["duration"])   # v3.5: grid de quadros
         warn = []
         if tr["avg_logprob"] is not None and tr["avg_logprob"] < BABBLE_LOGPROB:
             warn.append("avg_logprob %.2f: PROVAVEL BALBUCIO/RUIDO -- ouca e use --overrides" % tr["avg_logprob"])
@@ -305,23 +425,15 @@ def main():
         log("   texto: %s" % (tr["text"] or "(sem fala)"))
         for w in warn:
             log("   !! " + w)
-        seg = os.path.join(tmp, "seg%02d.mp4" % i)
-        encode_segment(src, seg, start, end, fps_ref, args.scale)
-        seg_files.append(seg)
+        cuts.append((src, start, end))
 
-    if not seg_files:
+    if not cuts:
         raise SystemExit("nenhuma parte sobrou")
-    lst = os.path.join(tmp, "lista.txt")
-    with open(lst, "w", encoding="utf-8") as fh:
-        for s in seg_files:
-            fh.write("file '%s'\n" % s.replace("'", r"'\''"))
-    rc, _, err = run([FFMPEG, "-hide_banner", "-loglevel", "error", "-y", "-f", "concat", "-safe", "0",
-                      "-i", lst, "-c", "copy", "-movflags", "+faststart", args.out])
-    if rc != 0:
-        raise SystemExit("ffmpeg (concat) falhou: %s" % err.strip()[-400:])
+    _build_master(cuts, args.out, fps_ref, args.scale)
+    av_check = _verify_master(args.out, fps_ref)
     total = probe(args.out)["duration"]
     orig = sum(e["duration"] for e in report)
-    summary = {"parts": report, "output": os.path.abspath(args.out), "fps": fps_ref,
+    summary = {"parts": report, "output": os.path.abspath(args.out), "fps": fps_ref, "av_check": av_check,
                "duration_in": round(orig, 3), "duration_out": round(total, 3),
                "removed": round(orig - total, 3),
                "rule": "influencIA normalizeTrimConcat: silencedetect -25dB/0.15s; inicio = fim do "

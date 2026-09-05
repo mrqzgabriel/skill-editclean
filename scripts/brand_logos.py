@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-EditClean - brand_logos.py  (v2.7)
+EditClean - brand_logos.py  (v3.1)
 
 Animacao de logo de marca "estilo motion design" quando a fala cita uma empresa
 (Claude/Anthropic, OpenAI, Google, Meta, Microsoft, DeepSeek...). Aprovado pelo
@@ -55,11 +55,12 @@ HOLD_S = 1.00              # sustentacao
 EXIT_S = 0.54              # saida
 RISE_PX_AT_1920 = 250      # de quanto abaixo ele sobe
 EXIT_PX_AT_1920 = 150      # quanto sobe ao sair
-SIZE_W_FRAC = 0.267        # largura do mark quadrado (288 px em 1080)
+SIZE_W_FRAC = 0.23         # largura maxima do mark quadrado (248 px em 1080; v3.1: era 0.267/288 px, "diminua os logos")
+CAPTION_GAP_PCT = 0.030    # folga entre o fim da faixa da legenda e o topo do logo (58 px em 1920; v3.1: era 0.004, "logo muito perto do texto")
 WIDE_W_FRAC = 0.60         # largura maxima para logotipo largo (wordmark)
 UI_RESERVE_PCT = 0.115     # reserva de UI do Reels (mesma do push-down)
 CAPTION_HALO_PCT = 0.012   # halo difuso abaixo da ultima linha
-MIN_GAP_S = 10.0           # espaco minimo entre duas animacoes
+MIN_GAP_S = 9.5            # espaco minimo entre duas animacoes (v3.1: era 10,0; o 2o par OpenAI+Cursor perdia por 0,04 s)
 
 # --- flutuacao (v2.8, pedido 01/09: "como se tivesse flutuando, margem curta") -----
 FLOAT_Y_PCT = 0.0045       # amplitude vertical, fracao da altura (8,6 px em 1920)
@@ -68,9 +69,14 @@ FLOAT_X_PCT = 0.0020       # deriva horizontal, fracao da largura (2 px em 1080)
 FLOAT_X_PERIOD_S = 3.1
 
 # --- glow (v2.8: 15% mais fraco que a v2.7 e alcance ~20% maior) ---------------------
-GLOW = {"bloom_sigma": 74, "bloom_alpha": 0.61,     # eram 62 / 0.72
-        "halo_sigma": 22, "halo_alpha": 0.72,       # eram 18 / 0.85
-        "hot_alpha": 0.68}                          # era 0.80
+GLOW = {"bloom_sigma": 74, "bloom_alpha": 0.49,     # v3.1 (03/09, "diminua um pouco o glow"): eram 0.61
+        "halo_sigma": 22, "halo_alpha": 0.58,       # / 0.72
+        "hot_alpha": 0.55}                          # / 0.68. Por marca: "glow" no registro (openai 0.7)
+
+# --- par de logos (v3.1, pedido 03/09: "OpenAI ... Cursor" um do lado do outro) ---------
+PAIR_WINDOW_S = 2.6        # 2a marca citada ate 2,6 s depois da 1a vira par (entra quando a palavra dela acende)
+PAIR_GAP_FRAC = 0.055      # espaco entre os dois marks, fracao da largura (59 px em 1080)
+PAIR_MAX_W_FRAC = 0.90     # o conjunto inteiro (mark + gap + mark) cabe em 90% da largura, centrado
 
 
 def _find_bin(name):
@@ -312,77 +318,146 @@ def caption_band_bottom(plan):
     return anchor + tallest / H + CAPTION_HALO_PCT
 
 
+def _tile_geometry(asset, W, H, band_top, band_bottom):
+    """Largura/altura/centro-y de um mark na faixa abaixo da legenda (regra da v2.7)."""
+    from PIL import Image
+    lw, lh = Image.open(asset).size
+    aspect = lw / float(lh)
+    band_h = (band_bottom - band_top) * H
+    if aspect <= 1.6:                       # mark quadrado/compacto
+        width = min(SIZE_W_FRAC * W, band_h * aspect + 8)
+        height = width / aspect
+        cy = band_top * H + height / 2.0
+    else:                                   # wordmark largo
+        width = min(WIDE_W_FRAC * W, band_h * aspect)
+        height = width / aspect
+        cy = band_top * H + band_h / 2.0
+    return width, height, cy, aspect
+
+
 def plan_events(work, plan_path, out_path, min_gap, only_first, brands_filter):
     plan = json.load(open(plan_path, encoding="utf-8"))
     words = json.load(open(os.path.join(work, "words.json"), encoding="utf-8"))["words"]
     registry = load_registry()
     W, H = float(plan["output"]["width"]), float(plan["output"]["height"])
     dur_out = plan["segments"][-1]["out_start"] + plan["segments"][-1]["duration"]
-    band_top = caption_band_bottom(plan) + 0.004
+    band_top = caption_band_bottom(plan) + CAPTION_GAP_PCT
     band_bottom = 1.0 - UI_RESERVE_PCT
     windows = busy_windows(plan)
 
-    events, skipped, last_end, seen = [], [], -1e9, set()
+    # candidatos em ordem de tempo (so os que sobreviveram ao corte)
+    cands = []
     for key, i, j in find_mentions(words, registry):
         if brands_filter and key not in brands_filter:
             continue
-        if only_first and key in seen:
-            continue
-        w = words[i]
-        t_src = float(w["start"])
+        t_src = float(words[i]["start"])
         t_word = src_to_out(plan, t_src)
         label = "%s (%s @src %.2fs)" % (key, " ".join(x["text"] for x in words[i:j + 1]), t_src)
         if t_word is None:
-            skipped.append({"brand": key, "why": "palavra caiu em trecho removido", "src": t_src})
             log("pula %s: trecho removido" % label)
             continue
-        t_in = t_word + LEAD_AFTER_WORD
-        t_end = t_in + RISE_S + HOLD_S + EXIT_S
-        if t_end > dur_out - 0.05:
-            skipped.append({"brand": key, "why": "sem tempo antes do fim do video", "out": t_in})
-            log("pula %s: perto do fim" % label)
-            continue
-        if t_in - last_end < min_gap:
-            skipped.append({"brand": key, "why": "menos de %.0fs da animacao anterior" % min_gap, "out": t_in})
-            log("pula %s: colado na anterior" % label)
-            continue
-        clash = [k for (a, b, k) in windows if a < t_end and b > t_in]
-        if clash:
-            skipped.append({"brand": key, "why": "coincide com %s" % ",".join(sorted(set(clash))), "out": t_in})
-            log("pula %s: coincide com %s" % (label, ",".join(sorted(set(clash)))))
-            continue
-        asset = fetch_logo(key)
-        if not asset:
-            skipped.append({"brand": key, "why": "sem logotipo oficial no registro", "out": t_in})
-            continue
-        from PIL import Image
-        lw, lh = Image.open(asset).size
-        aspect = lw / float(lh)
-        band_h = (band_bottom - band_top) * H
-        if aspect <= 1.6:                       # mark quadrado/compacto
-            width = min(SIZE_W_FRAC * W, band_h * aspect + 8)
-            height = width / aspect
-            cy = band_top * H + height / 2.0
-        else:                                   # wordmark largo
-            width = min(WIDE_W_FRAC * W, band_h * aspect)
-            height = width / aspect
-            cy = band_top * H + band_h / 2.0
-        ev = {"id": "BL%d" % (len(events) + 1), "brand": key, "name": registry["brands"][key].get("name", key),
-              "mention": " ".join(x["text"] for x in words[i:j + 1]), "token_index": i,
-              "src_time": t_src, "word_out": t_word,
-              "t_in": round(t_in, 3), "t_settle": round(t_in + RISE_S, 3),
-              "t_out": round(t_in + RISE_S + HOLD_S, 3), "t_end": round(t_end, 3),
-              "asset": asset, "color": registry["brands"][key].get("color", "#D97757"),
-              "palette": registry["brands"][key].get("palette"),
-              "cx": 0.5, "cy": round(cy / H, 4), "width_px": int(round(width)), "aspect": round(aspect, 3),
-              "rise_px": int(round(RISE_PX_AT_1920 * H / 1920.0)),
-              "exit_px": int(round(EXIT_PX_AT_1920 * H / 1920.0))}
-        events.append(ev)
-        seen.add(key)
-        last_end = t_end
-        log("%s -> out %.2f-%.2f  cy %.3f  largura %dpx" % (label, t_in, t_end, ev["cy"], ev["width_px"]))
+        cands.append({"key": key, "i": i, "j": j, "t_src": t_src, "t_word": t_word, "label": label,
+                      "mention": " ".join(x["text"] for x in words[i:j + 1])})
 
-    doc = {"version": "2.7", "canvas": {"w": int(W), "h": int(H), "fps": float(plan["output"]["fps"])},
+    events, skipped, last_end, seen = [], [], -1e9, set()
+    n = 0
+    while n < len(cands):
+        c = cands[n]
+        key = c["key"]
+        if only_first and key in seen:
+            n += 1
+            continue
+        # par: a proxima mencao e de OUTRA marca e cai ate PAIR_WINDOW_S depois
+        mates = [c]
+        if n + 1 < len(cands):
+            c2 = cands[n + 1]
+            if c2["key"] != key and 0.0 <= c2["t_word"] - c["t_word"] <= PAIR_WINDOW_S \
+                    and not (only_first and c2["key"] in seen):
+                mates.append(c2)
+        # v3.2: o par ocupa a tela ~1,1 s a mais que um logo so (a 2a marca sobe depois).
+        # Quando o par nao cabe -- fim do video, espacamento, ou janela de insercao --
+        # tentar a 1a marca SOZINHA antes de passar a vez. Antes so a 2a era tentada,
+        # e a abertura "A Anthropic lancou o Fable 5.1" ficava sem nenhum logo porque o
+        # rabo do par entrava 0,85 s dentro do push-down da insercao seguinte.
+        attempts = [mates] if len(mates) == 1 else [mates, mates[:1]]
+        chosen = None
+        for att in attempts:
+            a_in = c["t_word"] + LEAD_AFTER_WORD
+            a_out = att[-1]["t_word"] + LEAD_AFTER_WORD + RISE_S + HOLD_S
+            a_end = a_out + EXIT_S
+            a_label = " + ".join(m["label"] for m in att)
+            if a_end > dur_out - 0.05:
+                why = "sem tempo antes do fim do video"
+            elif a_in - last_end < min_gap:
+                why = "menos de %.0fs da animacao anterior" % min_gap
+            else:
+                clash = [k for (a, b, k) in windows if a < a_end and b > a_in]
+                why = ("coincide com %s" % ",".join(sorted(set(clash)))) if clash else None
+            if why is None:
+                chosen = (att, a_in, a_out, a_end, a_label)
+                break
+            skipped.append({"brand": key, "why": why, "out": a_in})
+            log("pula %s: %s" % (a_label, why))
+        if chosen is None:
+            n += 1                      # a 2a marca do par tenta sozinha
+            continue
+        mates, t_in, t_out, t_end, label = chosen
+        assets = [fetch_logo(m["key"]) for m in mates]
+        if not assets[0]:
+            skipped.append({"brand": key, "why": "sem logotipo oficial no registro", "out": t_in})
+            n += 1
+            continue
+        if len(mates) == 2 and not assets[1]:
+            mates, assets = mates[:1], assets[:1]     # a 2a marca nao tem asset: segue sozinha
+            t_out = t_in + RISE_S + HOLD_S
+            t_end = t_out + EXIT_S
+
+        geos = [_tile_geometry(a, W, H, band_top, band_bottom) for a in assets]
+        if len(mates) == 2:
+            gap = PAIR_GAP_FRAC * W
+            total = geos[0][0] + gap + geos[1][0]
+            s = min(1.0, PAIR_MAX_W_FRAC * W / total)
+            ws = [g[0] * s for g in geos]
+            hs = [g[1] * s for g in geos]
+            total = ws[0] + gap + ws[1]
+            x_left = (W - total) / 2.0
+            cxs = [(x_left + ws[0] / 2.0) / W, (x_left + ws[0] + gap + ws[1] / 2.0) / W]
+            cy = band_top * H + max(hs) / 2.0
+        else:
+            ws, cxs, cy = [geos[0][0]], [0.5], geos[0][2]
+
+        tiles = []
+        for m, a, g, w_px, cx in zip(mates, assets, geos, ws, cxs):
+            b = registry["brands"][m["key"]]
+            tiles.append({"brand": m["key"], "name": b.get("name", m["key"]), "mention": m["mention"],
+                          "token_index": m["i"], "src_time": m["t_src"], "word_out": m["t_word"],
+                          "t_in": round(m["t_word"] + LEAD_AFTER_WORD, 3),
+                          "t_settle": round(m["t_word"] + LEAD_AFTER_WORD + RISE_S, 3),
+                          "asset": a, "color": b.get("color", "#D97757"), "palette": b.get("palette"),
+                          "glow": float(b.get("glow", 1.0)),
+                          "cx": round(cx, 4), "width_px": int(round(w_px)), "aspect": round(g[3], 3)})
+        first = tiles[0]
+        ev = {"id": "BL%d" % (len(events) + 1), "brand": first["brand"], "name": first["name"],
+              "mention": " + ".join(t["mention"] for t in tiles), "token_index": first["token_index"],
+              "src_time": first["src_time"], "word_out": first["word_out"],
+              "t_in": first["t_in"], "t_settle": first["t_settle"],
+              "t_out": round(t_out, 3), "t_end": round(t_end, 3),
+              "asset": first["asset"], "color": first["color"], "palette": first["palette"],
+              "glow": first["glow"],
+              "cx": first["cx"], "cy": round(cy / H, 4), "width_px": first["width_px"], "aspect": first["aspect"],
+              "rise_px": int(round(RISE_PX_AT_1920 * H / 1920.0)),
+              "exit_px": int(round(EXIT_PX_AT_1920 * H / 1920.0)),
+              "pair": len(tiles) == 2, "tiles": tiles}
+        events.append(ev)
+        for t in tiles:
+            seen.add(t["brand"])
+        last_end = t_end
+        log("%s -> out %.2f-%.2f  cy %.3f  largura %s%s" % (
+            label, t_in, t_end, ev["cy"], "/".join(str(t["width_px"]) for t in tiles) + "px",
+            "  [PAR lado a lado, centrado]" if ev["pair"] else ""))
+        n += len(mates)
+
+    doc = {"version": "3.1", "canvas": {"w": int(W), "h": int(H), "fps": float(plan["output"]["fps"])},
            "band": {"top": round(band_top, 4), "bottom": round(band_bottom, 4)},
            "events": events, "skipped": skipped}
     json.dump(doc, open(out_path, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
@@ -468,6 +543,31 @@ def render_logo_tile(logo_alpha, width_px, glow_boost, pal):
     return Image.fromarray(np.clip(out * 255.0, 0, 255).astype(np.uint8), "RGBA")
 
 
+def _anim_state(t, t_in, t_settle, t_out, t_end, rise_px, exit_px):
+    """(dy, scale, alpha, glow) de um mark no instante t; None fora da janela."""
+    if t < t_in or t >= t_end:
+        return None
+    if t < t_settle:
+        p = clamp01((t - t_in) / max(1e-6, t_settle - t_in))
+        k = ease_out_back(p)
+        return (rise_px * (1.0 - k), 0.80 + 0.20 * k,
+                smoothstep(clamp01((t - t_in) / 0.30)), 1.0 + 0.55 * (1.0 - p) ** 2)
+    if t < t_out:
+        p = (t - t_settle) / max(1e-6, (t_out - t_settle))
+        return (0.0, 1.0, 1.0, 1.0 + 0.14 * math.sin(math.pi * p))
+    p = clamp01((t - t_out) / max(1e-6, t_end - t_out))
+    k = ease_in_cubic(p)
+    return (-exit_px * k, 1.0 + 0.07 * k, 1.0 - smoothstep(clamp01((p - 0.08) / 0.92)), 1.0 + 0.30 * k)
+
+
+def _event_tiles(e):
+    """v3.1: evento traz 'tiles' (1 ou 2 marks). Documento antigo (v2.7) vira um tile."""
+    if e.get("tiles"):
+        return e["tiles"]
+    return [{"asset": e["asset"], "color": e["color"], "palette": e.get("palette"), "glow": e.get("glow", 1.0),
+             "cx": e["cx"], "width_px": e["width_px"], "t_in": e["t_in"], "t_settle": e["t_settle"]}]
+
+
 def render_sequence(doc, seq_dir):
     from PIL import Image
     W, H, fps = doc["canvas"]["w"], doc["canvas"]["h"], doc["canvas"]["fps"]
@@ -479,8 +579,9 @@ def render_sequence(doc, seq_dir):
     n = int(math.ceil(seq_end * fps))
     logos = {}
     for e in events:
-        if e["asset"] not in logos:
-            logos[e["asset"]] = Image.open(e["asset"]).convert("RGBA").split()[3]
+        for tl in _event_tiles(e):
+            if tl["asset"] not in logos:
+                logos[tl["asset"]] = Image.open(tl["asset"]).convert("RGBA").split()[3]
     cache = {}
     for i in range(n):
         t = i / fps
@@ -488,46 +589,35 @@ def render_sequence(doc, seq_dir):
         for e in events:
             if not (e["t_in"] <= t < e["t_end"]):
                 continue
-            if t < e["t_settle"]:
-                p = clamp01((t - e["t_in"]) / (e["t_settle"] - e["t_in"]))
-                k = ease_out_back(p)
-                dy = e["rise_px"] * (1.0 - k)
-                scale = 0.80 + 0.20 * k
-                alpha = smoothstep(clamp01((t - e["t_in"]) / 0.30))
-                glow = 1.0 + 0.55 * (1.0 - p) ** 2
-            elif t < e["t_out"]:
-                p = (t - e["t_settle"]) / max(1e-6, (e["t_out"] - e["t_settle"]))
-                dy, scale, alpha = 0.0, 1.0, 1.0
-                glow = 1.0 + 0.14 * math.sin(math.pi * p)
-            else:
-                p = clamp01((t - e["t_out"]) / (e["t_end"] - e["t_out"]))
-                k = ease_in_cubic(p)
-                dy = -e["exit_px"] * k
-                scale = 1.0 + 0.07 * k
-                alpha = 1.0 - smoothstep(clamp01((p - 0.08) / 0.92))
-                glow = 1.0 + 0.30 * k
-            if alpha <= 0.002:
-                continue
-            # flutuacao: seno lento em y e outro, mais lento, em x; entra junto com a subida
-            # (ganho smoothstep) para nao brigar com o overshoot da entrada
+            # flutuacao do CONJUNTO: mesma fase para os dois marks de um par
             tf = t - e["t_in"]
-            fgain = smoothstep(clamp01(tf / max(1e-6, e["t_settle"] - e["t_in"])))
-            dy += fgain * FLOAT_Y_PCT * H * math.sin(2 * math.pi * tf / FLOAT_Y_PERIOD_S)
-            dx = fgain * FLOAT_X_PCT * W * math.sin(2 * math.pi * tf / FLOAT_X_PERIOD_S + 1.1)
-            width = max(8, int(round(e["width_px"] * scale)))
-            key = (e["asset"], width, round(glow, 2), e["color"], json.dumps(e.get("palette")))
-            if key not in cache:
-                if len(cache) > 60:
-                    cache.clear()
-                pal = ({k: tuple(v) for k, v in e["palette"].items()} if e.get("palette") else palette(e["color"]))
-                cache[key] = render_logo_tile(logos[e["asset"]], width, glow, pal)
-            tile = cache[key]
-            if alpha < 0.999:
-                tile = tile.copy()
-                tile.putalpha(tile.split()[3].point(lambda v, k=alpha: int(v * k)))
-            x = int(round(e["cx"] * W + dx - tile.width / 2.0))
-            y = int(round(e["cy"] * H + dy - tile.height / 2.0))
-            frame.alpha_composite(tile, (x, y))
+            fy = FLOAT_Y_PCT * H * math.sin(2 * math.pi * tf / FLOAT_Y_PERIOD_S)
+            fx = FLOAT_X_PCT * W * math.sin(2 * math.pi * tf / FLOAT_X_PERIOD_S + 1.1)
+            for tl in _event_tiles(e):
+                st = _anim_state(t, tl["t_in"], tl["t_settle"], e["t_out"], e["t_end"], e["rise_px"], e["exit_px"])
+                if st is None:
+                    continue
+                dy, scale, alpha, glow = st
+                if alpha <= 0.002:
+                    continue
+                fgain = smoothstep(clamp01((t - tl["t_in"]) / max(1e-6, tl["t_settle"] - tl["t_in"])))
+                dy += fgain * fy
+                dx = fgain * fx
+                gmul = float(tl.get("glow", 1.0))
+                width = max(8, int(round(tl["width_px"] * scale)))
+                key = (tl["asset"], width, round(glow * gmul, 2), tl["color"], json.dumps(tl.get("palette")))
+                if key not in cache:
+                    if len(cache) > 60:
+                        cache.clear()
+                    pal = ({k: tuple(v) for k, v in tl["palette"].items()} if tl.get("palette") else palette(tl["color"]))
+                    cache[key] = render_logo_tile(logos[tl["asset"]], width, glow * gmul, pal)
+                tile = cache[key]
+                if alpha < 0.999:
+                    tile = tile.copy()
+                    tile.putalpha(tile.split()[3].point(lambda v, k=alpha: int(v * k)))
+                x = int(round(tl["cx"] * W + dx - tile.width / 2.0))
+                y = int(round(e["cy"] * H + dy - tile.height / 2.0))
+                frame.alpha_composite(tile, (x, y))
         frame.save(os.path.join(seq_dir, "%05d.png" % (i + 1)))
     return n
 

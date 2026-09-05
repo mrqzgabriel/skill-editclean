@@ -27,7 +27,7 @@ Estagios:
            anchor_overlays -> build_plan (rascunho) -> lista de blocos -> validate-only
   draft    render rascunho (crf 30) + frames de inspecao em draft_frames/
   render   build_plan alta -> brand_logos plan -> render (crf 14) -> compose logos (crf 18) ->
-           sfx_mix -> validate_output (no arquivo com SFX)
+           sfx_mix -> validate_output -> av_sync_check (no arquivo com SFX)
   assets   capas (um mood por vez) + legenda do post
   deliver  promove o .partial validado e entrega a pasta no Desktop (--overwrite opcional)
   all      prep + render + assets + deliver (sem parar para olhar -- so quando ja conferido)
@@ -133,7 +133,7 @@ def stage_prep(work, job):
         cmd = script("concat_parts.py") + ["--dir", pdir, "--pattern", job.get("parts_pattern", "parte*.mp4"),
                                             "--out", P["master"], "--scale", job.get("scale", "1080:1920"),
                                             "--report", os.path.join(work, "partes_report.json"), "--overrides", ov_path,
-                                            "--last-tail-extra", str(job.get("last_tail_extra", 1.4)), "--overwrite"]
+                                            "--last-tail-extra", str(job.get("last_tail_extra", 0.35)), "--overwrite"]
         sh(cmd)
         src = P["master"]
     if not src or not os.path.isfile(src):
@@ -148,6 +148,9 @@ def stage_prep(work, job):
     sh(script("detect_subject.py") + ["--video", src, "--outdir", work])
     sh(script("transcribe.py") + [src, "--out", P["words_raw"], "--language", job.get("language", "pt")])
     fx = script("fix_transcript.py") + [P["words_raw"], P["manifest"], P["words"]]
+    loc = os.path.join(work, "transcript-fixes.local.json")     # v3.1: erro de ouvido que so vale neste video
+    if os.path.isfile(loc):
+        fx += ["--fixes-local", loc]
     cop = job.get("copies")
     if cop:
         cop = cop if os.path.isabs(cop) else os.path.join(work, cop)
@@ -198,6 +201,27 @@ def stage_draft(work, job):
     log("rascunho em %s; frames em %s (olhe antes do render alto)" % (part, fdir))
 
 
+def _av_lengths(path):
+    """v3.5: duracao do video (quadros/fps) e do audio DECODIFICADO (amostras). Duracao de container
+    ou de pacote nao serve: o muxer esconde buraco esticando o pacote anterior."""
+    o = subprocess.run([FFPROBE, "-v", "error", "-select_streams", "v:0", "-show_entries",
+                        "stream=nb_frames,r_frame_rate", "-of", "json", path], stdout=subprocess.PIPE).stdout
+    st = (json.loads(o.decode() or "{}").get("streams") or [{}])[0]
+    num, den = (st.get("r_frame_rate") or "24/1").split("/")
+    vdur = int(st.get("nb_frames") or 0) / (float(num) / float(den or 1))
+    raw = subprocess.run([FFMPEG, "-v", "error", "-i", path, "-vn", "-ac", "1", "-ar", "48000", "-f", "s16le", "-"],
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout
+    return vdur, len(raw) / 2.0 / 48000.0
+
+
+def _assert_av_equal(path, label, tol=0.05):
+    v, a = _av_lengths(path)
+    log("%s: video %.3f s | audio decodificado %.3f s | diferenca %+.3f s" % (label, v, a, a - v))
+    if abs(a - v) > tol:
+        raise SystemExit("%s: audio e video com duracoes diferentes (%+.3f s). Isso e voz dessincronizada; "
+                         "a fonte (master) ou a cadeia de audio perdeu amostras. Nao siga." % (label, a - v))
+
+
 def stage_render(work, job):
     P = paths(work, job)
     build_plan(work, job, job.get("quality", "high"))
@@ -219,6 +243,7 @@ def stage_render(work, job):
             os.remove(f)
     sh(script("render_edit.py") + ["--plan", P["plan"], "--out", inter, "--workdir", os.path.join(work, "render_hi")])
     cur = inter + ".partial.mp4"
+    _assert_av_equal(cur, "render_hi A/V")            # v3.5: portao 1 (regra 18/19)
     if events:
         shutil.rmtree(os.path.join(work, "logos_work"), ignore_errors=True)
         out = os.path.join(work, P["base"] + "_semSFX.partial.mp4")
@@ -232,12 +257,20 @@ def stage_render(work, job):
                                       "--workdir", os.path.join(work, "sfx_work")]
         if sfx.get("no_ducking"):
             cmd.append("--no-ducking")
+        mus = sfx.get("music")                      # v3.1: trilha de fundo {"file", "gain_db", "fade_in", "fade_out", "duck"}
+        if mus and mus.get("file"):
+            mf = mus["file"] if os.path.isabs(mus["file"]) else os.path.join(work, mus["file"])
+            cmd += ["--music", mf, "--music-db", str(mus.get("gain_db", -20)),
+                    "--music-fade-in", str(mus.get("fade_in", 1.5)), "--music-fade-out", str(mus.get("fade_out", 2.5))]
+            if mus.get("duck") is False:
+                cmd.append("--no-music-duck")
         sh(cmd)
-        bus = os.path.join(work, "sfx_work", "sfx_bus.wav")
-        if os.path.isfile(bus):
-            t = subprocess.run([FFMPEG, "-v", "info", "-i", bus, "-af", "ebur128=peak=true", "-f", "null", "-"], stderr=subprocess.PIPE).stderr.decode()
-            lines = [l.strip() for l in t.splitlines() if l.strip().startswith(("I:", "Peak:"))]
-            log("bus SFX: " + " ".join(lines[-2:]))
+        for label, name in (("bus SFX", "sfx_bus.wav"), ("bus TRILHA (duckada)", "music_bus.wav")):
+            bus = os.path.join(work, "sfx_work", name)
+            if os.path.isfile(bus):
+                t = subprocess.run([FFMPEG, "-v", "info", "-i", bus, "-af", "ebur128=peak=true", "-f", "null", "-"], stderr=subprocess.PIPE).stderr.decode()
+                lines = [l.strip() for l in t.splitlines() if l.strip().startswith(("I:", "Peak:"))]
+                log("%s: %s" % (label, " ".join(lines[-2:])))
         cur = out
     else:
         shutil.copyfile(cur, P["dest"] + ".partial.mp4"); cur = P["dest"] + ".partial.mp4"
@@ -252,6 +285,17 @@ def stage_render(work, job):
             raise SystemExit("validacao reprovou; corrija o plano e rode render de novo")
     except json.JSONDecodeError:
         raise SystemExit("validate_output sem JSON: %s" % p.stderr.decode("utf-8", "replace")[-500:])
+    # v3.5: portao 2 -- sincronia A/V medida no arquivo FINAL contra o master (regra 19). O
+    # validate_output aprovou um video com +0,42 s de voz adiantada; so este mapa pega isso.
+    _assert_av_equal(cur, "final A/V")
+    master = plan.get("source", {}).get("path") or job.get("_source")
+    q = subprocess.run(script("av_sync_check.py") + ["--final", cur, "--master", master, "--plan", P["plan"],
+                                                      "--max", "0.12", "--report", os.path.join(work, "av-sync.json")],
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    for line in q.stdout.decode("utf-8", "replace").splitlines():
+        log("   " + line)
+    if q.returncode != 0:
+        raise SystemExit("sincronia A/V reprovou (av_sync_check); nao entregue. Veja av-sync.json.")
     log("render OK -> %s (ainda .partial; 'deliver' promove)" % cur)
 
 

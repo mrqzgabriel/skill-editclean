@@ -19,8 +19,44 @@
     },
     "openai": {
       "name": "OpenAI / ChatGPT",
-      "aliases": ["openai", "open ai", "chatgpt", "chat gpt", "gpt"],
+      "aliases": ["openai", "open ai", "chatgpt", "chat gpt", "gpt", "codex"],
       "sources": [{"url": "https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg", "kind": "svg", "remove_fill": ["#74aa9c"]}],
+      "color": "#FFFFFF",
+      "glow": 0.7,
+      "_glow_note": "v3.1 (03/09): 'diminua o glow do logo da openai' -- o mark e so linha fina, o bloom frio estourava"
+    },
+    "cursor": {
+      "name": "Cursor",
+      "aliases": ["cursor"],
+      "sources": [{"url": "file:///Users/gabriel/.claude/skills/editclean/references/logo-sources/cursor-icon.svg", "kind": "svg"}],
+      "color": "#FFFFFF",
+      "_origin": "icone isolado do primeiro <path> do logo inline (site-header) de cursor.com -- o favicon.svg oficial vem com fundo quadrado chapado (mancha o bloom); este path e o mesmo mark, so sem o fundo"
+    },
+    "coderabbit": {
+      "name": "CodeRabbit",
+      "aliases": ["coderabbit", "code rabbit"],
+      "sources": [{"url": "file:///Users/gabriel/.claude/skills/editclean/references/logo-sources/coderabbit-icon.svg", "kind": "svg"}],
+      "color": "#FF570A",
+      "_origin": "coelho isolado do <path class=\"...fill-white\"> do site-header-logo-symbol-svg de coderabbit.ai -- o favicon/apple-touch-icon oficial vem com o circulo laranja chapado (mancha o bloom); este path e o mesmo coelho, so sem o circulo"
+    },
+    "apple": {
+      "name": "Apple",
+      "aliases": ["apple", "épol", "epol"],
+      "sources": [{"url": "https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg", "kind": "svg"}],
+      "color": "#FFFFFF",
+      "_origin": "SVG oficial na Wikimedia Commons (Apple_logo_black.svg); o renderer usa so o alfa, a cor do fill nao importa"
+    },
+    "nvidia": {
+      "name": "NVIDIA",
+      "aliases": ["nvidia", "envidia", "dgx spark", "spark", "dgx"],
+      "sources": [{"url": "https://upload.wikimedia.org/wikipedia/commons/a/a4/NVIDIA_logo.svg", "kind": "svg"}],
+      "color": "#76B900",
+      "_origin": "wordmark oficial (olho + NVIDIA) na Wikimedia Commons; 'spark'/'dgx' = produto DGX Spark da NVIDIA, mesma regra do codex -> openai"
+    },
+    "spacex": {
+      "name": "SpaceX",
+      "aliases": ["spacex", "space x"],
+      "sources": [{"url": "https://upload.wikimedia.org/wikipedia/commons/d/de/SpaceX-Logo.svg", "kind": "svg"}],
       "color": "#FFFFFF"
     },
     "google": {

@@ -303,14 +303,37 @@ def validate(video, plan=None, frames_dir=None):
     if frames_dir:
         os.makedirs(frames_dir, exist_ok=True)
         picked = []
+        # v3.2: o ultimo frame sai da duracao do STREAM DE VIDEO, nao do container:
+        # o fade de encerramento deixa o audio 0,3 s mais longo que o video (§7c), e
+        # "duracao do container - 0,10" caia depois do ultimo frame -> ffmpeg nao
+        # escrevia nada e a checagem reprovava um video correto. Ainda assim tentamos
+        # uma escadinha para tras, caso o ultimo frame nao decodifique.
+        try:
+            v_dur = float(v.get("duration") or 0)
+        except (TypeError, ValueError):
+            v_dur = 0.0
+        if v_dur <= 0:
+            try:
+                nf = float(v.get("nb_frames") or 0)
+                num, den = (v.get("avg_frame_rate") or "0/1").split("/")
+                fps_v = float(num) / float(den) if float(den) else 0.0
+                v_dur = nf / fps_v if (nf and fps_v) else 0.0
+            except (TypeError, ValueError, ZeroDivisionError):
+                v_dur = 0.0
+        end = min([x for x in (duration, v_dur) if x > 0] or [duration])
         for label, t in (("first", 0.05), ("mid", max(0.1, duration / 2.0)),
-                         ("last", max(0.1, duration - 0.10))):
+                         ("last", max(0.1, end - 0.10))):
             dest = os.path.join(frames_dir, "validate_%s.jpg" % label)
-            rcf, _, _ = run([FFMPEG, "-hide_banner", "-loglevel", "error",
-                             "-ss", "%.3f" % t, "-i", video, "-frames:v", "1",
-                             "-q:v", "3", "-y", dest])
-            if rcf == 0 and os.path.isfile(dest) and os.path.getsize(dest) > 0:
-                picked.append({"label": label, "time": round(t, 3), "path": dest})
+            for back in (0.0, 0.15, 0.35, 0.60):
+                tt = max(0.0, t - back)
+                rcf, _, _ = run([FFMPEG, "-hide_banner", "-loglevel", "error",
+                                 "-ss", "%.3f" % tt, "-i", video, "-frames:v", "1",
+                                 "-q:v", "3", "-y", dest])
+                if rcf == 0 and os.path.isfile(dest) and os.path.getsize(dest) > 0:
+                    picked.append({"label": label, "time": round(tt, 3), "path": dest})
+                    break
+                if label != "last":
+                    break
         if len(picked) == 3:
             rep.ok("frames_inspecao", "extraidos: %s"
                    % ", ".join("%s@%.2fs" % (p["label"], p["time"]) for p in picked))

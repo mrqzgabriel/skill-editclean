@@ -112,6 +112,10 @@ def collect_events(plan, logos, rules):
         add(t_in, "whoosh_in", "logo %s sobe" % e.get("mention", e.get("brand")))
         add(t_settle, "logo_land", "logo %s pousa (hit macio)" % e.get("mention", e.get("brand")))
         add(t_settle, "shimmer", "logo %s acende (sparkle)" % e.get("mention", e.get("brand")))
+        # v3.1: par de logos -- o 2o mark sobe quando a palavra dele acende
+        for tl in (e.get("tiles") or [])[1:]:
+            add(float(tl["t_in"]), "whoosh_in", "logo %s sobe (par)" % tl.get("mention", tl.get("brand")))
+            add(float(tl["t_settle"]), "logo_land", "logo %s pousa (par)" % tl.get("mention", tl.get("brand")))
         add(t_out, "whoosh_out", "logo %s sai" % e.get("mention", e.get("brand")))
 
     # push-down
@@ -169,7 +173,9 @@ def collect_events(plan, logos, rules):
 
 
 # ---------------------------------------------------------------- mix
-def build_mix(events, lib, video_in, out, gain_db, workdir, ducking):
+def build_mix(events, lib, video_in, out, gain_db, workdir, ducking, music=None):
+    """music (v3.1): {"file", "gain_db", "fade_in", "fade_out", "duck"} -- trilha de fundo abaixo da voz:
+    faz loop ate a duracao do video, fade in/out, ganho e ducking (sidechain pela voz)."""
     inputs = [video_in]
     chains = []
     labels = []
@@ -197,40 +203,76 @@ def build_mix(events, lib, video_in, out, gain_db, workdir, ducking):
         chains.append(f + chain + lab)
         labels.append(lab)
         used.append(dict(e, file=os.path.basename(spec["file"]), at=round(t, 3), gain_db=round(gain_db + spec["gain_db"], 1)))
-    if not labels:
+    if not labels and not music:
         raise SystemExit("nenhum SFX para mixar")
     n = len(labels)
-    # soma dos SFX (amix normaliza por padrao -> desligar com normalize=0)
-    sfx_sum = "%samix=inputs=%d:normalize=0:dropout_transition=0[sfx]" % ("".join(labels), n)
-    voice = "[0:a]aformat=sample_rates=48000:channel_layouts=stereo[voz]"
-    if ducking:
-        # a voz manda: SFX abaixa levemente quando a voz esta presente (sidechain suave)
-        mix = "[sfx][voz]sidechaincompress=threshold=0.05:ratio=2:attack=20:release=250:makeup=1[sfxd];" \
-              "[voz][sfxd]amix=inputs=2:normalize=0:dropout_transition=0[aout]"
-        # sidechaincompress consome [voz]; precisamos de uma copia
-        voice = "[0:a]aformat=sample_rates=48000:channel_layouts=stereo,asplit=2[voz][vozsc]"
-        mix = "[sfx][vozsc]sidechaincompress=threshold=0.05:ratio=2:attack=20:release=250:makeup=1[sfxd];" \
-              "[voz][sfxd]amix=inputs=2:normalize=0:dropout_transition=0[aout]"
-    else:
-        mix = "[voz][sfx]amix=inputs=2:normalize=0:dropout_transition=0[aout]"
-    fc = ";".join(chains + [sfx_sum, voice, mix])
+    dur = probe_duration(video_in) or 600
     os.makedirs(workdir, exist_ok=True)
+    parts = list(chains)
+    stems = []                      # ramos ja duckados que somam com a voz
+    sc = []                         # copias da voz para sidechain
+    if labels:
+        # soma dos SFX (amix normaliza por padrao -> desligar com normalize=0)
+        parts.append("%samix=inputs=%d:normalize=0:dropout_transition=0[sfx]" % ("".join(labels), n))
+        if ducking:
+            # a voz manda: SFX abaixa levemente quando a voz esta presente (sidechain suave)
+            parts.append("[sfx][vozsc]sidechaincompress=threshold=0.05:ratio=2:attack=20:release=250:makeup=1[sfxd]")
+            sc.append("[vozsc]"); stems.append("[sfxd]")
+        else:
+            stems.append("[sfx]")
+    mus_chain = None
+    if music:
+        m = len(inputs)
+        inputs.append(music["file"])
+        fi, fo = float(music.get("fade_in", 1.5)), float(music.get("fade_out", 2.5))
+        mus_chain = ("[%d:a]aformat=sample_rates=48000:channel_layouts=stereo,aloop=loop=-1:size=2147483647,"
+                     "atrim=end=%.3f,asetpts=PTS-STARTPTS,afade=t=in:st=0:d=%.2f,afade=t=out:st=%.3f:d=%.2f,volume=%.2fdB[mus]"
+                     % (m, dur, fi, max(0.0, dur - fo), fo, float(music.get("gain_db", -20.0))))
+        parts.append(mus_chain)
+        if music.get("duck", True):
+            # trilha abaixa mais que os SFX quando a voz entra (ratio maior, release longo = respira)
+            parts.append("[mus][vozsc2]sidechaincompress=threshold=0.09:ratio=2.5:attack=80:release=900:makeup=1[musd]")
+            sc.append("[vozsc2]"); stems.append("[musd]")
+        else:
+            stems.append("[mus]")
+    if sc:
+        voice = "[0:a]aformat=sample_rates=48000:channel_layouts=stereo,asplit=%d[voz]%s" % (len(sc) + 1, "".join(sc))
+    else:
+        voice = "[0:a]aformat=sample_rates=48000:channel_layouts=stereo[voz]"
+    mix = "[voz]%samix=inputs=%d:normalize=0:dropout_transition=0[aout]" % ("".join(stems), len(stems) + 1)
+    fc = ";".join(parts + [voice, mix])
     open(os.path.join(workdir, "sfx_filtergraph.txt"), "w").write(fc)
     # bus so de SFX (para conferir nivel): mesma cadeia sem a voz
-    fc_bus = ";".join(chains + [sfx_sum])
-    cmd_bus = [FFMPEG, "-y", "-v", "error"]
-    for p in inputs:
-        cmd_bus += ["-i", p]
-    cmd_bus += ["-filter_complex", fc_bus, "-map", "[sfx]", "-c:a", "pcm_s16le", "-t", "%.3f" % (probe_duration(video_in) or 600),
-                os.path.join(workdir, "sfx_bus.wav")]
-    subprocess.run(cmd_bus, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if labels:
+        fc_bus = ";".join(chains + ["%samix=inputs=%d:normalize=0:dropout_transition=0[sfx]" % ("".join(labels), n)])
+        cmd_bus = [FFMPEG, "-y", "-v", "error"]
+        for p in inputs:
+            cmd_bus += ["-i", p]
+        cmd_bus += ["-filter_complex", fc_bus, "-map", "[sfx]", "-c:a", "pcm_s16le", "-t", "%.3f" % dur,
+                    os.path.join(workdir, "sfx_bus.wav")]
+        subprocess.run(cmd_bus, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    # bus so da trilha JA DUCKADA (o que realmente toca embaixo da voz)
+    if music:
+        fc_m = mus_chain
+        if music.get("duck", True):
+            fc_m += ";[0:a]aformat=sample_rates=48000:channel_layouts=stereo[vsc];" \
+                    "[mus][vsc]sidechaincompress=threshold=0.09:ratio=2.5:attack=80:release=900:makeup=1[musout]"
+            lab = "[musout]"
+        else:
+            lab = "[mus]"
+        cmd_m = [FFMPEG, "-y", "-v", "error"]
+        for p in inputs:
+            cmd_m += ["-i", p]
+        cmd_m += ["-filter_complex", fc_m, "-map", lab, "-c:a", "pcm_s16le", "-t", "%.3f" % dur,
+                  os.path.join(workdir, "music_bus.wav")]
+        subprocess.run(cmd_m, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     cmd = [FFMPEG, "-y", "-v", "error", "-stats"]
     for p in inputs:
         cmd += ["-i", p]
     cmd += ["-filter_complex", fc, "-map", "0:v", "-map", "[aout]", "-map_chapters", "-1", "-map_metadata", "0",
             "-dn", "-sn", "-c:v", "copy",
             "-c:a", "aac", "-b:a", "224k", "-ar", "48000", "-movflags", "+faststart", "-shortest", out]
-    log("mixando %d SFX..." % n)
+    log("mixando %d SFX%s..." % (n, " + trilha %s" % os.path.basename(music["file"]) if music else ""))
     p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if p.returncode != 0:
         sys.stderr.write(p.stderr.decode("utf-8", "replace")[-3000:])
@@ -247,6 +289,12 @@ def main():
     ap.add_argument("--library", default=None, help="manifest.json alternativo")
     ap.add_argument("--gain-db", type=float, default=-14.0, help="ganho global dos SFX (abaixo da voz)")
     ap.add_argument("--no-ducking", action="store_true")
+    ap.add_argument("--music", default=None, help="trilha de fundo (mp3/wav); loop ate o fim, fade in/out, ducking pela voz")
+    ap.add_argument("--music-db", type=float, default=-16.0,
+                    help="ganho da trilha; medido 03/09: fonte -10 LUFS + ducking -> bus -30,6 LUFS (voz -13,5): ~17 dB abaixo")
+    ap.add_argument("--music-fade-in", type=float, default=1.5)
+    ap.add_argument("--music-fade-out", type=float, default=2.5)
+    ap.add_argument("--no-music-duck", action="store_true")
     ap.add_argument("--no-opening", action="store_true")
     ap.add_argument("--workdir", default=None)
     ap.add_argument("--report", default=None)
@@ -265,9 +313,15 @@ def main():
         print(json.dumps(events, ensure_ascii=False, indent=1))
         return
     workdir = args.workdir or os.path.join(os.path.dirname(os.path.abspath(args.out)), "sfx_work")
-    used = build_mix(events, lib, args.video_in, args.out, args.gain_db, workdir, not args.no_ducking)
-    rep = {"version": "2.16", "gain_db": args.gain_db, "ducking": not args.no_ducking,
-           "library": man.get("_license_note"), "events": used}
+    music = None
+    if args.music:
+        if not os.path.isfile(args.music):
+            raise SystemExit("trilha nao encontrada: %s" % args.music)
+        music = {"file": args.music, "gain_db": args.music_db, "fade_in": args.music_fade_in,
+                 "fade_out": args.music_fade_out, "duck": not args.no_music_duck}
+    used = build_mix(events, lib, args.video_in, args.out, args.gain_db, workdir, not args.no_ducking, music)
+    rep = {"version": "3.1", "gain_db": args.gain_db, "ducking": not args.no_ducking,
+           "library": man.get("_license_note"), "music": music, "events": used}
     if args.report:
         json.dump(rep, open(args.report, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     log("%d SFX mixados -> %s" % (len(used), args.out))

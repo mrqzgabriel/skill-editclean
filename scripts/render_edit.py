@@ -369,7 +369,7 @@ def build_ass(plan, out_path):
     ]
 
     style_of = {"normal": "Normal", "strong": "Strong", "accent": "Accent"}
-    joiner = " " if space_scale >= 0.999 else ("{\\fscx%d} {\\fscx100}" % int(round(space_scale * 100)))
+    sp_scale_tag = "" if space_scale >= 0.999 else ("\\fscx%d" % int(round(space_scale * 100)))
 
     def render_layer(words_state, n_lines, fs_block, fade, kind):
         """Texto do estado atual do karaoke para uma camada ('glow' ou 'main')."""
@@ -383,7 +383,7 @@ def build_ass(plan, out_path):
         for ln in range(n_lines):
             if ln not in parts_by_line:
                 continue
-            seg = []
+            seg, prev_size = [], 0
             for st, txt, is_new in parts_by_line[ln]:
                 size = int(round(fs_block * (accent_ratio if st == "Accent" else 1.0)))
                 if kind == "glow":
@@ -405,8 +405,15 @@ def build_ass(plan, out_path):
                 else:
                     decor = ""
                     anim = ("\\alpha&HFF&\\t(0,%d,\\alpha&H00&)" % fade) if (is_new and fade > 0) else ""
+                if seg:
+                    # v3.2: espaco no tamanho do MAIOR vizinho (igual a medicao do
+                    # build_plan); invisivel, so ocupa largura.
+                    sp = max(prev_size, size)
+                    seg.append("{\\rNormal\\fs%d\\bord0\\shad0\\1a&HFF&\\3a&HFF&\\4a&HFF&%s}%s"
+                               % (sp, sp_scale_tag, " "))
                 seg.append("{\\r%s\\fs%d%s%s}%s" % (st, size, decor, anim, txt))
-            chunks.append(joiner.join(seg))
+                prev_size = size
+            chunks.append("".join(seg))
         return "\\N".join(chunks)
 
     for blk in caps.get("blocks", []):
@@ -623,6 +630,10 @@ def build_filtergraph(plan, ass_path=None, overlay_inputs=None):
         )
 
         if has_audio:
+            # v3.5: o master chega CONTINUO e com audio == video (concat_parts._verify_master e o
+            # portao _assert_av_equal do pipeline garantem). Nao use 'aresample=async' aqui: nas
+            # partes do influencIA o salto de timestamp e falso e o silencio inserido desalinhava
+            # a 2a metade de cada clipe (medido: ate -0,42 s).
             parts.append(
                 "[0:a]atrim=start=%.4f:end=%.4f,asetpts=PTS-STARTPTS[a%d]"
                 % (seg["src_start"], seg["src_end"], i)

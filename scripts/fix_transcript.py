@@ -72,6 +72,8 @@ def main():
     ap.add_argument("--copies", default=None, help="project_meta.json (partes com 'text') ou JSON com lista de textos")
     ap.add_argument("--copies-txt", default=None, help="arquivo texto, uma copia por linha")
     ap.add_argument("--fixes", default=FIXES)
+    ap.add_argument("--fixes-local", default=None,
+                    help="v3.1: JSON deste video (single/pairs/keep_case) por cima do registro geral -- para erro de ouvido que so vale aqui")
     ap.add_argument("--min-ratio", type=float, default=0.80)
     args = ap.parse_args()
 
@@ -80,6 +82,12 @@ def main():
     man = json.load(open(args.manifest, encoding="utf-8"))
     sil = (man.get("analysis") or {}).get("silences") or []
     fixes = json.load(open(args.fixes, encoding="utf-8")) if os.path.isfile(args.fixes) else {"single": {}, "pairs": {}, "keep_case": []}
+    if args.fixes_local and os.path.isfile(args.fixes_local):
+        loc = json.load(open(args.fixes_local, encoding="utf-8"))
+        for key in ("single", "pairs"):
+            fixes.setdefault(key, {}).update(loc.get(key) or {})
+        fixes["keep_case"] = list(fixes.get("keep_case", [])) + list(loc.get("keep_case") or [])
+        sys.stderr.write("[transcript] fixes locais: %s\n" % ", ".join(list((loc.get("single") or {}).keys()) + list((loc.get("pairs") or {}).keys())))
     keep_case = set(fixes.get("keep_case", []))
     changes = []
 
@@ -159,6 +167,12 @@ def main():
                 good = vocab.get(nk, core)
                 if good != core and good in keep_case and core.lower() == good.lower():
                     w[k]["text"] = good + p; changes.append("%s -> %s (caixa)" % (core, good))
+                elif (good != core and good.islower() and core[:1].isupper() and core[1:].islower()
+                      and core.lower() == good.lower() and k > 0
+                      and not T(k - 1).endswith((".", "!", "?")) and core not in keep_case):
+                    # v3.1: "IA Local" -> "IA local": palavra comum que o transcritor capitalizou no
+                    # meio da frase; a copia (minuscula) manda. Inicio de frase fica como esta.
+                    w[k]["text"] = good + p; changes.append("%s -> %s (caixa baixa da copia)" % (core, good))
                 continue
             if len(nk) < 4:
                 continue
@@ -181,12 +195,31 @@ def main():
                     changes.append("'%s %s' -> %s (copia)" % (a, bc, rep)); continue
             i += 1
         # pontuacao de fim de parte: "marketing, valeu" -> "marketing. Valeu"
+        # v3.1: parte que comeca com palavra funcional ("E o criador...") usa as duas primeiras
+        # palavras como marca, e a frase anterior fecha mesmo sem virgula ("SpaceX e o criador" ->
+        # "SpaceX. E o criador") -- so quando a copia anterior termina em ponto.
+        firsts2 = set()
+        for c in copies:
+            m2 = re.match(r"\W*([\w$-]+)\W+([\w$-]+)", c)
+            if m2 and norm(m2.group(1)) in STOP:
+                firsts2.add((norm(m2.group(1)), norm(m2.group(2))))
+        ends_dot = all(c.rstrip()[-1:] in ".!?" for c in copies if c.strip())
         for k in range(1, len(w)):
             core, p = split_punct(T(k))
-            if norm(core) in firsts and T(k - 1).endswith(",") and core[:1].islower():
-                w[k - 1]["text"] = T(k - 1).rstrip(",") + "."
+            prev = T(k - 1)
+            nxt = norm(split_punct(T(k + 1))[0]) if k + 1 < len(w) else ""
+            # v3.4: nao abrir frase depois de palavra funcional. "resultados, e a OpenAI nao
+            # informou" casava com o comeco da parte 1 ("A OpenAI apresentou...") e virava
+            # "resultados e. A OpenAI" no meio de uma frase so. Depois de "e/de/com/que" a frase
+            # continua; o caso legitimo da v3.1 ("SpaceX e o criador") tem prev = nome, nao STOP.
+            cont = norm(split_punct(prev)[0]) in STOP
+            uni = norm(core) in firsts and prev.endswith(",") and core[:1].islower() and not cont
+            bi = (ends_dot and (norm(core), nxt) in firsts2 and not prev.endswith((".", "!", "?"))
+                  and core[:1].islower() and not cont)
+            if uni or bi:
+                w[k - 1]["text"] = prev.rstrip(",") + "."
                 w[k]["text"] = core[:1].upper() + core[1:] + p
-                changes.append("'%s, %s' -> frase nova" % (T(k - 1), core))
+                changes.append("'%s %s' -> frase nova%s" % (prev, core, " (2 palavras)" if bi else ""))
 
     # ------------------------------------------------------------ 4. tempos
     for k in range(len(w)):
