@@ -3,7 +3,19 @@ name: editclean
 description: Edita um vídeo aplicando o estilo do "Video referencia" — jump cuts dentro do mesmo enquadramento, legendas palavra a palavra com duas famílias tipográficas, zooms sutis, inserções gráficas reais, grading quente discreto, logo oficial animado quando a fala cita uma empresa (Claude, OpenAI, Google…), sound design nos eventos de motion e, quando o vídeo chega em trechos/partes (clipes do Veo/influencIA, zip com parteN.mp4), corte do ar morto de cada parte antes de juntar; se uma parte do influencIA saiu com palavra pronunciada errada, sotaque inglês ou balbucio, entra no sistema, troca a cópia e regenera a parte na origem. Use quando pedirem para editar um vídeo nesse estilo, "editar as partes/trechos", corrigir pronúncia de um vídeo do influencIA ou "atualizar a skill editclean".
 ---
 
-# EditClean v3.5
+# EditClean v4.0
+
+v4.0 (05/09/2026, "Simplesmente incrível nota 10"): **estilo dinâmico** aprovado no GPT-6 Astra. As
+inserções deixam de ser só imagem em faixa: **b-roll em vídeo** dos canais oficiais do assunto
+(`broll_fetch.py`), **formas variadas** de mostrar (tela dividida, tela cheia com pan, clipe em
+tela cheia ou em faixa 16:9, página/tabela com marca-texto e zoom), **nada na frente do rosto**,
+**pelo menos uma tela dividida** por vídeo, legenda que troca de posição por fundido (nunca
+atravessa o rosto), movimento lento em toda imagem/clipe, e SFX no estilo da referência (whoosh
+antecipado, impacto no pouso, click no corte seco, whoosh na saída; bus ≈ −21 LUFS). Fluxo: o
+`render_edit` gera a BASE limpa (sem legenda, inserção ou push-down) e o **`compose_shots.py`**
+compõe legenda + shots por cima (§5b). Regras 20–23. O caminho antigo (overlays em faixa/push-down)
+continua existindo quando o `job.json` não tem `shots`.
+
 
 v3.5 (04/09/2026, "tá muito desincronizado, resolva na raiz"): **a raiz é um salto falso de
 timestamp no áudio de cada parte do influencIA.** Cada clipe traz 372 pacotes AAC = 7,915 s de
@@ -60,7 +72,7 @@ o scratchpad da sessão (`$WORK`), nunca `/tmp`.
 | 0 | vídeo do influencIA: baixar as partes ATUAIS, conferir cópia × áudio (whisper-1), **fonemas**, **vogal aberta** (`vowel_check.py`), **sincronia labial** (`lipsync_check.py`) e regenerar o que precisar | `influencia_fix_part.py check` / `pron` / `vowel_check.py` / `lipsync_check.py` / `fix` | §1c |
 | 1 | `job.json` no `$WORK` (nome, partes, overrides, cópias, inserções por âncora, ênfases, capa) | modelo em §11 | §11 |
 | 2 | `prep`: master (ar morto cortado por parte, backups ignorados) → análise → rosto → transcrição → correção guiada pela cópia → âncoras → plano rascunho → **lista de blocos** | `pipeline.py prep` | §1b, §3–6 |
-| 3 | imagens REAIS para as inserções (~4/min): prints de páginas oficiais (`shot_page.py`) ou Apify, curadas uma a uma | §5 | §5 |
+| 3 | material REAL para os shots: b-roll em vídeo dos canais oficiais (`broll_fetch.py` + folha de contato), prints de páginas oficiais (`shot_page.py`); escolher a FORMA de cada shot (§5b) | §5, §5b | §5b |
 | 4 | `draft`: render rascunho e frames — olhar composição antes do render alto | `pipeline.py draft` | §7 |
 | 5 | `render`: plano alta → logos oficiais → render crf 14 → composição crf 18 → **SFX** → validação com fontes reais | `pipeline.py render` | §7–8 |
 | 6 | `assets`: capa cinema (2–3 moods, escolher olhando) + legenda do post (sem travessão) | `pipeline.py assets` | §7d–7e |
@@ -390,6 +402,63 @@ de posicionamento: a imagem acompanha o que está sendo dito; evite colidir com 
 (a menção dentro de push-down é pulada pelo `brand_logos`), e não deixe o vídeo "descido" mais
 que ~12 s seguidos.
 
+## 5b. Estilo dinâmico: shots (v4.0, aprovado 05/09/2026)
+
+Pedidos do Gabriel que definiram o estilo, nas palavras dele: "queria ver como ficaria com trechos
+de vídeos do assunto"; "sempre a mesma edit quando aparece as imagens não fica legal, seria legal um
+vídeo mais dinâmico com tipos de mostragens diferentes de imagens/vídeos"; "não ficou legal o texto
+passando na cara da pessoa pra voltar pra baixo"; "amei o efeito da imagem se mexendo"; "não tenha
+imagem na frente do rosto, eu gosto de quando o rosto vai pra baixo, a imagem aparece em cima e o
+texto no meio... pelo menos 01 vez".
+
+**Formas** (`mode` de cada shot em `job.shots`; `compose_shots.py`):
+
+| mode | o que faz | quando usar |
+|---|---|---|
+| `split` | imagem grande no alto (caixa 1000×600 sobre fundo desfocado), pessoa recortada embaixo, legenda desce para a costura por fundido; entrada 0,30 s com rastro, saída 0,26 s | tabela/print que sustenta a fala; **pelo menos 1 por vídeo** |
+| `fullpan` | imagem em tela cheia com pan (`lr`/`rl`) e zoom lento | foto larga (aérea, paisagem) |
+| `clip` | b-roll em tela cheia (cover, `anchor_x`) com zoom lento; `fit:"width"` mostra o 16:9 inteiro numa faixa sobre o próprio quadro desfocado | vídeo do assunto; `fit width` para títulos e telas de UI |
+| `highlight` | página/tabela em tela cheia sobre a base desfocada, marca-texto amarelo crescendo em `marks`, zoom lento até `focus` (`zoom_to`) | texto oficial com a frase-chave; linha de tabela com o número da fala |
+| ~~card~~ | **proibido**: cartão sobre a pessoa cobre o rosto (regra 20) | — |
+
+Regras de composição: nada na frente do rosto; variar a forma entre shots vizinhos; 8–10 shots por
+minuto (o GPT-6 Astra tem 10 em 59 s); dois shots colados (`"chain": true`) fazem corte seco com
+`click`; entrada/saída de tela cheia por fundido com zoom-blur (0,22/0,20 s); a legenda só muda de
+lugar no `split`, e por **fundido** (some embaixo, aparece na costura), nunca deslizando; movimento
+em tudo (zoom 4–7%, pan na foto). Faixa 16:9 e páginas ficam acima da legenda (`band_cy` 0,30–0,36).
+
+**B-roll** (`broll_fetch.py`): `search "<empresa> <produto>" --channel <empresa>` lista só o canal
+oficial; `get <id> <nome> --outdir "$WORK/broll" --channel-expected <empresa>` baixa ≤1080p sem áudio,
+gera `sheet_<nome>.png` (1 quadro a cada 2 s) e registra em `broll/broll.json`. **Escolha os trechos
+olhando a folha**: título do produto, pessoa usando, tela do agente, imagem abstrata para "AGI",
+infraestrutura para "GPUs/data center". Trechos de 2–4 s; `clip_in` em segundos do vídeo de origem;
+`anchor_x` para centrar a parte que importa; texto/UI largos → `fit:"width"`. O yt-dlp do Python 3.9
+não serve (YouTube devolve "The page needs to be reloaded", e o cliente android só dá 360p): o script
+cria `.venv-ytdlp` com Python ≥ 3.11 (`~/.local/bin/python3.12`) e o yt-dlp atual. Direitos: só canal
+oficial da empresa, trecho curto, uso de comentário; registrar a origem no relatório.
+
+**job.json** (shots por frase-âncora; `shots_plan.py` resolve para tempos de saída pelo mapa de
+segmentos do plano e escreve `shots.json` + `plan_sfx.json`):
+
+```json
+"shots": [
+ {"id":"A_titulo","mode":"clip","path":"broll/lancamento.mp4","clip_in":41.0,"fit":"width","from":"citou","to":"geral"},
+ {"id":"C_datacenter","mode":"clip","path":"broll/stargate_texas.mp4","clip_in":52.3,"from":"em","to":"GPUs"},
+ {"id":"C_aerea","mode":"fullpan","path":"ov/stargate_abilene.png","pan":"lr","zoom":[1.04,1.10],"chain":true,"to":"Texas"},
+ {"id":"OV2_split","mode":"split","path":"ov/benchmarks_coding.png","from":"publicou","to":"tarefas"},
+ {"id":"OV3_hl","mode":"highlight","path":"ov/computer_use_92.png","marks":[[0,0.79,1,0.995]],"focus":[0,0.79,0.62,1],"zoom_to":1.42,"from":"teria","to":"92%","pad_end":0.35},
+ {"id":"F_agi","mode":"clip","path":"broll/developers.mp4","clip_in":120.2,"from":"inteligência","from_occurrence":2,"to":"exige"}
+]
+```
+
+`marks`/`focus` são frações da imagem (x0,y0,x1,y1); para achar as palavras numa página, projete
+as colunas brilhantes por linha (gap 4 px separa palavras; o GPT-6 Astra usou isso para "a limited
+set of organizations"). Com `shots`, o `pipeline` faz: `prep` (inclui `shots_plan`, imprime a lista)
+→ `draft` (base crf 24 + composição crf 26 + frames de cada shot em `draft_frames/`) → `render`
+(base crf 14 → `compose_shots` → logos → `sfx_mix` com `plan_sfx.json` → portões A/V → validação).
+O `av_sync_check` roda na BASE: o compose é quadro a quadro e o rastreador de boca se perde na tela
+dividida. Fundo do `highlight` é a base desfocada a 30% (preto puro reprova em `frames_pretos`).
+
 ## 6. Plano de edição
 
 `build_plan.py` aplica o perfil e imprime um relatório: fronteiras que preservam a fala (160 ms
@@ -421,7 +490,7 @@ pelo ElevenLabs (`audio`) também varia por take: reconferência `[PRONUNCIA]` (
 `draft` primeiro (crf 30, frames em `draft_frames/`) — pega problema de composição barato.
 Depois `render`: `build_plan --quality high` → `brand_logos.py plan` (eventos entram no plano;
 `output.crf` 14 no intermediário) → `render_edit.py` → `brand_logos.py render` (crf 18, `-t` igual
-ao vídeo) → `sfx_mix.py` → `validate_output.py` **no arquivo com SFX**.
+ao vídeo) → `sfx_mix.py` → `validate_output.py` **no arquivo com SFX**. **v4:** ganho padrão **−9 dB** (bus ≈ −21 LUFS) e manifesto com `slide`=whoosh_in (antecipado 0,30 s), `pop`=impacto, `slide_back`=whoosh_out, aprovados no GPT-6 Astra.
 
 ### 7b. Logo de marca em motion design
 
@@ -684,6 +753,14 @@ transcrição para gerar capa e legenda.
 19. **Nenhum vídeo é entregue sem `av_sync_check.py` aprovado** (pior desync ≤ 0,12 s). O
     `validate_output` não mede sincronia; o `pipeline render` roda o checador no arquivo com
     SFX e reprova sozinho. Vídeo de fonte única (não em partes) passa pelo mesmo portão.
+20. **Nada na frente do rosto.** Sem cartão, sem imagem flutuando sobre a pessoa. Ou a pessoa
+    desce e a imagem fica em cima (`split`), ou a imagem/clipe ocupa a tela inteira.
+21. **Pelo menos uma tela dividida por vídeo** (`split`): rosto embaixo, imagem em cima, legenda
+    no meio. O `shots_plan` aborta sem ela (`--allow-no-split` só com pedido explícito).
+22. **B-roll só de canal oficial** da empresa/assunto, em trechos de 2–4 s, com origem registrada
+    (`broll/broll.json` vai para `projeto/`). Nunca reação/terceiros.
+23. **Variar a forma e mover tudo**: nunca duas inserções vizinhas na mesma forma; zoom/pan lento
+    em toda imagem e clipe; legenda troca de lugar só por fundido.
 
 ## Notas de implementação (armadilhas já resolvidas — não reintroduza)
 

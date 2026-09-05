@@ -27,6 +27,7 @@ Estagios:
            anchor_overlays -> build_plan (rascunho) -> lista de blocos -> validate-only
   draft    render rascunho (crf 30) + frames de inspecao em draft_frames/
   render   build_plan alta -> brand_logos plan -> render (crf 14) -> compose logos (crf 18) ->
+           (com job.shots: base limpa -> compose_shots -> logos -> sfx; ver SKILL.md 5b)
            sfx_mix -> validate_output -> av_sync_check (no arquivo com SFX)
   assets   capas (um mood por vez) + legenda do post
   deliver  promove o .partial validado e entrega a pasta no Desktop (--overwrite opcional)
@@ -116,6 +117,9 @@ def paths(work, job):
         "ov": os.path.join(work, "ov.json"),
         "acc": os.path.join(work, "acc.json"),
         "logos": os.path.join(work, "brand-logos.json"),
+        "shots": os.path.join(work, "shots.json"),            # v4: estilo dinamico
+        "plan_sfx": os.path.join(work, "plan_sfx.json"),
+        "subject": os.path.join(work, "subject.json"),
         "caption": os.path.join(work, base + "_LEGENDA.txt"),
         "capa_dir": os.path.join(work, "capa"),
         "base": base,
@@ -162,7 +166,10 @@ def stage_prep(work, job):
     build_plan(work, job, "draft")
     print_blocks(P["plan"])
     sh(script("render_edit.py") + ["--plan", P["plan"], "--validate-only"])
-    log("prep OK -> olhe os blocos acima e as insercoes; depois: render")
+    if job.get("shots"):                                   # v4: estilo dinamico (b-roll + formas variadas)
+        sh(script("shots_plan.py") + ["--job", os.path.join(work, "job.json"), "--words", P["words"], "--plan", P["plan"],
+                                      "--out", P["shots"], "--plan-sfx", P["plan_sfx"]])
+    log("prep OK -> olhe os blocos acima e as insercoes/shots; depois: render")
 
 
 def build_plan(work, job, quality):
@@ -185,8 +192,118 @@ def print_blocks(plan_path):
         sys.stderr.write("   %6.2f-%6.2f fs%3d L%d | %s\n" % (b["start"], b["end"], b["font_size_px"], b["lines"], txt))
 
 
+def _render_shots(work, job, quality):
+    """v4 (05/09/2026, aprovado 'nota 10' no GPT-6 Astra): base SEM legenda/insercao/push-down ->
+    compose_shots (legenda como camada, shots de shots.json) -> logos -> SFX (plan_sfx) -> portoes -> validacao."""
+    P = paths(work, job)
+    if not os.path.isfile(P["shots"]):
+        raise SystemExit("job tem 'shots' mas nao existe shots.json: rode 'prep' de novo")
+    build_plan(work, job, quality)
+    # logos: planejar com as JANELAS DOS SHOTS como push-down (plan_sfx.json), senao o logo pousa
+    # na boca da pessoa dentro da tela dividida ou em cima da pagina (visto no GPT-6 Astra v4)
+    sh(script("shots_plan.py") + ["--job", os.path.join(work, "job.json"), "--words", P["words"], "--plan", P["plan"],
+                                  "--out", P["shots"], "--plan-sfx", P["plan_sfx"]])
+    sh(script("brand_logos.py") + ["plan", "--work", work, "--plan", P["plan_sfx"]], check=False)
+    plan = json.load(open(P["plan"], encoding="utf-8"))
+    events = json.load(open(P["logos"], encoding="utf-8")).get("events", []) if os.path.isfile(P["logos"]) else []
+    # legenda, insercoes e push-down saem da base: o compose_shots faz tudo isso por cima
+    plan["captions"]["enabled"] = False; plan["overlays"] = []
+    if isinstance(plan.get("push_down"), dict):
+        plan["push_down"]["enabled"] = False; plan["push_down"]["windows"] = []
+    plan["brand_logos"] = []
+    plan["output"]["crf"] = 14 if quality == "high" else 24
+    plan.setdefault("notes", []).append("pipeline v4: base limpa -> compose_shots -> logos -> sfx -> validate")
+    base_plan = os.path.join(work, "plan_base.json"); json.dump(plan, open(base_plan, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+    sh(script("render_edit.py") + ["--plan", base_plan, "--validate-only"])
+    base = os.path.join(work, "base_%s.mp4" % quality)
+    import hashlib
+    base_part = base + ".partial.mp4"
+    plan_sig = hashlib.sha1(json.dumps({k: v for k, v in plan.items() if k not in ("notes",)}, sort_keys=True).encode("utf-8")).hexdigest()
+    sig_file = base + ".plan.sha1"
+    reuse = os.path.isfile(base_part) and os.path.isfile(sig_file) and open(sig_file).read().strip() == plan_sig
+    for f in (P["dest"] + ".partial.mp4", os.path.join(work, P["base"] + "_semSFX.partial.mp4")):
+        if os.path.exists(f): os.remove(f)
+    if reuse:
+        log("base reaproveitada (plano igual): %s" % base_part)
+    else:
+        if os.path.exists(base_part): os.remove(base_part)
+        sh(script("render_edit.py") + ["--plan", base_plan, "--out", base, "--workdir", os.path.join(work, "render_base")])
+        open(sig_file, "w").write(plan_sig)
+    _assert_av_equal(base_part, "base A/V")
+    ass = os.path.join(work, "render_base", "captions.ass")
+    if not os.path.isfile(ass):
+        # o render da base nao escreve o .ass (legenda desligada): gera a partir do plano original
+        full_plan = json.load(open(P["plan"], encoding="utf-8"))
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import render_edit as RE
+        RE.build_ass(full_plan, ass)
+    comp = os.path.join(work, P["base"] + "_comp.partial.mp4")
+    cmd = script("compose_shots.py") + ["--base", base_part, "--shots", P["shots"], "--ass", ass,
+                                        "--fonts", os.path.join(SKILL_ROOT, "assets", "fonts"), "--subject", P["subject"], "--out", comp,
+                                        "--crf", "14" if quality == "high" else "26", "--preset", "medium" if quality == "high" else "veryfast"]
+    sh(cmd)
+    cur = comp
+    if events:
+        shutil.rmtree(os.path.join(work, "logos_work"), ignore_errors=True)
+        out = os.path.join(work, P["base"] + "_semSFX.partial.mp4")
+        sh(script("brand_logos.py") + ["render", "--events", P["logos"], "--in", cur, "--out", out, "--workdir", os.path.join(work, "logos_work")])
+        cur = out
+    sfx = job.get("sfx", {})
+    if sfx is not False and sfx.get("enabled", True):
+        out = P["dest"] + ".partial.mp4"
+        cmd = script("sfx_mix.py") + ["--plan", P["plan_sfx"], "--events", P["logos"], "--in", cur, "--out", out,
+                                      "--gain-db", str(sfx.get("gain_db", -9)), "--report", os.path.join(work, "sfx-events.json"),
+                                      "--workdir", os.path.join(work, "sfx_work")]
+        if sfx.get("no_ducking"): cmd.append("--no-ducking")
+        mus = sfx.get("music")
+        if mus and mus.get("file"):
+            mf = mus["file"] if os.path.isabs(mus["file"]) else os.path.join(work, mus["file"])
+            cmd += ["--music", mf, "--music-db", str(mus.get("gain_db", -20)), "--music-fade-in", str(mus.get("fade_in", 1.5)), "--music-fade-out", str(mus.get("fade_out", 2.5))]
+            if mus.get("duck") is False: cmd.append("--no-music-duck")
+        sh(cmd)
+        bus = os.path.join(work, "sfx_work", "sfx_bus.wav")
+        if os.path.isfile(bus):
+            t = subprocess.run([FFMPEG, "-v", "info", "-i", bus, "-af", "ebur128=peak=true", "-f", "null", "-"], stderr=subprocess.PIPE).stderr.decode()
+            lines = [l.strip() for l in t.splitlines() if l.strip().startswith(("I:", "Peak:"))]
+            log("bus SFX: %s" % " ".join(lines[-2:]))
+        cur = out
+    else:
+        shutil.copyfile(cur, P["dest"] + ".partial.mp4"); cur = P["dest"] + ".partial.mp4"
+    _assert_av_equal(cur, "final A/V")
+    if quality != "high":
+        fdir = os.path.join(work, "draft_frames"); os.makedirs(fdir, exist_ok=True)
+        shots = json.load(open(P["shots"], encoding="utf-8"))["shots"]
+        for s_ in shots:
+            for t in (s_["start"] + 0.12, (s_["start"] + s_["end"]) / 2.0, s_["end"] - 0.12):
+                subprocess.run([FFMPEG, "-v", "error", "-y", "-ss", "%.3f" % t, "-i", cur, "-frames:v", "1", os.path.join(fdir, "f_%06.2f.png" % t)])
+        log("rascunho (estilo dinamico) em %s; frames dos shots em %s" % (cur, fdir)); return cur
+    val = os.path.join(work, "validation.json")
+    p = subprocess.run(script("validate_output.py") + [cur, "--plan", P["plan"], "--frames-dir", os.path.join(work, "validation"), "--json-only"],
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    open(val, "wb").write(p.stdout)
+    try:
+        d = json.loads(p.stdout.decode("utf-8", "replace"))
+        log("validacao: %s | erros: %s | avisos: %s" % ("APROVADO" if not d.get("errors") else "REPROVADO", d.get("errors"), [w[:80] for w in d.get("warnings", [])]))
+        if d.get("errors"):
+            raise SystemExit("validacao reprovou; corrija e rode render de novo")
+    except json.JSONDecodeError:
+        raise SystemExit("validate_output sem JSON: %s" % p.stderr.decode("utf-8", "replace")[-500:])
+    # sincronia: medida na BASE (o compose e quadro a quadro; o rastreador de boca se perde na tela dividida)
+    master = plan.get("source", {}).get("path") or job.get("_source")
+    q = subprocess.run(script("av_sync_check.py") + ["--final", base_part, "--master", master, "--plan", P["plan"], "--max", "0.12",
+                                                      "--report", os.path.join(work, "av-sync.json")], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    for line in q.stdout.decode("utf-8", "replace").splitlines()[-3:]:
+        log("   " + line)
+    if q.returncode != 0:
+        raise SystemExit("sincronia A/V reprovou na base (av_sync_check); nao entregue.")
+    log("render OK (estilo dinamico) -> %s (ainda .partial; 'deliver' promove)" % cur)
+    return cur
+
+
 def stage_draft(work, job):
     P = paths(work, job)
+    if job.get("shots"):
+        return _render_shots(work, job, "draft")
     build_plan(work, job, "draft")
     out = os.path.join(work, "draft.mp4")
     shutil.rmtree(os.path.join(work, "render_draft"), ignore_errors=True)
@@ -224,6 +341,8 @@ def _assert_av_equal(path, label, tol=0.05):
 
 def stage_render(work, job):
     P = paths(work, job)
+    if job.get("shots"):
+        return _render_shots(work, job, "high")
     build_plan(work, job, job.get("quality", "high"))
     sh(script("brand_logos.py") + ["plan", "--work", work, "--plan", P["plan"]], check=False)
     plan = json.load(open(P["plan"], encoding="utf-8"))
@@ -253,7 +372,7 @@ def stage_render(work, job):
     if sfx is not False and sfx.get("enabled", True):
         out = P["dest"] + ".partial.mp4"
         cmd = script("sfx_mix.py") + ["--plan", P["plan"], "--events", P["logos"], "--in", cur, "--out", out,
-                                      "--gain-db", str(sfx.get("gain_db", -14)), "--report", os.path.join(work, "sfx-events.json"),
+                                      "--gain-db", str(sfx.get("gain_db", -9)), "--report", os.path.join(work, "sfx-events.json"),
                                       "--workdir", os.path.join(work, "sfx_work")]
         if sfx.get("no_ducking"):
             cmd.append("--no-ducking")

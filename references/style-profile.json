@@ -965,7 +965,9 @@
   "cover_title_inside_reels_safe_zone_note": "Pedido 01/09: 'ta muito pra baixo; pesquise os ranges das coisas no Reels; o texto nunca deve ficar embaixo dessas coisas'. Titulo sempre acima de y=1500 (rodape + grade 1:1) e abaixo do queixo.",
   "deliver_folder_on_desktop": true,
   "deliver_folder_on_desktop_note": "Pedido 01/09: 'entrega o video + legenda + thumb dentro de uma pasta no desktop sempre'. E gerar a legenda do post em .txt (metodo do influencIA, sem travessao).",
-  "approved_deliverable_2026_09_01": "Gabriel aprovou ('ficou perfeito') o conjunto video v3 + capa cinema v3 + legenda do Fable 5.1: trechos cortados por parte, parte 2 regenerada na origem, fade no fim, logo flutuando com glow suave, capa studio_haze com titulo na zona segura e enfase na cor do logo, legenda gpt-5.5 sem travessao, entrega em pasta no Desktop. E o padrao para os proximos videos."
+  "approved_deliverable_2026_09_01": "Gabriel aprovou ('ficou perfeito') o conjunto video v3 + capa cinema v3 + legenda do Fable 5.1: trechos cortados por parte, parte 2 regenerada na origem, fade no fim, logo flutuando com glow suave, capa studio_haze com titulo na zona segura e enfase na cor do logo, legenda gpt-5.5 sem travessao, entrega em pasta no Desktop. E o padrao para os proximos videos.",
+  "dynamic_shots_style": true,
+  "dynamic_shots_style_note": "05/09/2026 (GPT-6 Astra, 'nota 10'): insercoes como SHOTS variados (split / fullpan / clip / highlight), b-roll em video dos canais oficiais, nada na frente do rosto, pelo menos um split, legenda troca de posicao por fundido, movimento em tudo, SFX whoosh/impacto/click a -9 dB. Ver SKILL.md 5b e compose_shots.py."
  },
  "parts_concat": {
   "enabled_default": true,

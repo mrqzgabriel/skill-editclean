@@ -87,7 +87,7 @@ def main():
         for pat in ("edit-plan.json", "words.json", "words_raw.json", "acc.json", "ov.json", "subject.json", "val.json",
                     "validation*.json", "brand-logos.json", "partes_report.json", "partes_overrides.json",
                     "influencia_check.json", "project_meta.json", "sfx-events.json", "job.json",
-                    "*.capa.json", "capa/*.capa.json", "*.legenda.json"):
+                    "*.capa.json", "capa/*.capa.json", "*.legenda.json", "shots.json", "plan_sfx.json", "av-sync.json", "broll/broll.json"):
             for f in glob.glob(os.path.join(args.project_dir, pat)):
                 shutil.copyfile(f, os.path.join(pdir, os.path.basename(f)))
         # v3.0: as imagens inseridas (referenciadas no ov.json) e o manifesto de SFX usado
