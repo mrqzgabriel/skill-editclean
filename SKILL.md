@@ -475,10 +475,23 @@ muda 1,07 → **0,4 s**. Se o vídeo terminar seco demais, suba `last_tail_extra
 `make_cover.py --project <id> --headline "O *Fable 5.1* CHEGOU 25% MAIS BARATO" --logo claude
 --mood <void_light|studio_haze|server_room|city_window>`: imagem sem texto pelo
 `gemini-3-pro-image` (pessoa calma, sem cara de bravo, logo oficial aceso na cena) + tipografia
-da legenda composta pelo script (Helvetica Neue Bold + Playfair 1,55× na ênfase, na cor do logo),
+da legenda composta pelo script (Helvetica Neue Bold + Playfair 1,55× na ênfase, na **cor da marca**),
 título **dentro da zona segura do Reels** (queixo → y 1500, largura ≤ 78%). Gere 2–3 moods e
 escolha olhando: rosto idêntico e calmo (eliminatório), logo fiel, título legível. Headline no
 formato aprovado: frase curta em caixa-alta + produto em Playfair.
+
+**Cor da capa é da MARCA (v3.5, 05/09/2026, palavras do Gabriel: "quando falar do Claude usar
+aquele laranja, quando falar do GPT usar esse azul, e se falar de outra use a cor da empresa").**
+O `make_cover` lê `cover_accent` (senão `color`) da marca do `--logo` em `references/brand-logos.json`
+e usa essa cor em dois lugares: a ênfase serifada do título e a **luz do logo no prompt da imagem**
+(linha `ACCENT LIGHT`), para a cena já nascer na cor certa. Registrado: **Claude/Anthropic `#D97757`**
+(o laranja aprovado no Fable 5.1) e **OpenAI/GPT `#3FA9F5`** (o azul aprovado no GPT-6 Astra);
+Google, NVIDIA etc. caem na `color` oficial do registro. Branco (mark da OpenAI) nunca vira ênfase.
+Override pontual: `"cover": {"accent_color": "#hex"}` no `job.json` ou `--accent-color`. Sem `--logo`,
+continua amostrando a cor do logo na imagem. Marca nova sem cor: preencha `color`/`cover_accent`
+no registro antes de gerar a capa. Recolorir uma capa já gerada: `--text-only` para o título; para
+o brilho do logo, máscara só na região do logo com a caixa do rosto (YuNet) excluída e mistura em
+RGB (misturar matiz cria borda verde; a primeira tentativa pintou a bochecha de azul).
 
 ### 7e. Legenda do post
 

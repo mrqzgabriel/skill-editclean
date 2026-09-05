@@ -265,6 +265,65 @@ def layout(runs, max_w, max_h, accent_ratio, size_hi, size_lo):
     return size_lo, [runs], sans, serif
 
 
+def _hue_name(hx):
+    import colorsys
+    r, g, b = (int(hx.lstrip("#")[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
+    h, s_, v = colorsys.rgb_to_hsv(r, g, b)
+    if s_ < 0.12:
+        return "neutral white"
+    deg = h * 360.0
+    for lim, name in ((15, "red"), (45, "orange"), (70, "yellow"), (160, "green"), (200, "teal"),
+                      (255, "blue"), (290, "purple"), (335, "pink"), (361, "red")):
+        if deg < lim:
+            return name
+    return "red"
+
+
+def brand_accent_for(logo_arg):
+    """v3.5 (05/09/2026), pedido do Gabriel: "quando falar do Claude usar aquele laranja, quando falar
+    do GPT usar esse azul, e se falar de outra use a cor da empresa". A cor da enfase do titulo e da
+    luz do logo vem da MARCA (brand-logos.json: cover_accent > color), nao da amostra da imagem.
+    Devolve (hex, nome) ou (None, None) se nao houver marca/cor util (branco nao serve de enfase)."""
+    if not logo_arg or os.path.isfile(str(logo_arg)):
+        return None, None
+    try:
+        bl = _load("brand_logos")
+        b = (bl.load_registry().get("brands") or {}).get(str(logo_arg)) or {}
+    except Exception:
+        return None, None
+    hx = b.get("cover_accent") or b.get("color")
+    if not hx or not re.fullmatch(r"#?[0-9a-fA-F]{6}", str(hx)):
+        return None, None
+    hx = "#" + hx.lstrip("#").upper()
+    r, g, bb = (int(hx[1:][i:i + 2], 16) for i in (0, 2, 4))
+    if min(r, g, bb) > 225:
+        return None, None
+    return hx, b.get("cover_accent_name") or _hue_name(hx)
+
+
+def resolve_accent(arg, logo_arg):
+    """--accent-color: none -> branco; #hex -> esse; auto -> cor da marca (--logo) ou, sem marca, amostra da imagem."""
+    if arg is None or str(arg).lower() == "none":
+        return None
+    if str(arg).lower() != "auto":
+        return arg
+    hx, name = brand_accent_for(logo_arg)
+    if hx:
+        log("enfase na cor da marca %s: %s (%s)" % (logo_arg, hx, name))
+        return hx
+    return "auto"
+
+
+def brand_light_hint(logo_arg):
+    """Linha extra do prompt da imagem: a LUZ do logo e o acento da cena na cor da marca."""
+    hx, name = brand_accent_for(logo_arg)
+    if not hx:
+        return ""
+    return ("\n- ACCENT LIGHT: the logo emblem glows with %s light (%s) and the scene's accent lighting "
+            "follows the same hue. Tint only the LIGHT and glow; keep the emblem's own colors and shape exactly.\n"
+            % (name, hx))
+
+
 def accent_color_from_image(image_path, fallback="#D97757"):
     """Cor da enfase = a cor com que o LOGO saiu na imagem (pixels laranja saturados e claros);
     se nao houver o bastante, a cor oficial da marca."""
@@ -426,7 +485,7 @@ def main():
     if args.text_only:
         if not args.ref or not args.headline:
             raise SystemExit("--text-only precisa de --ref (imagem) e --headline")
-        acc = None if str(args.accent_color).lower() == "none" else args.accent_color
+        acc = resolve_accent(args.accent_color, None if args.no_logo else args.logo)
         info = compose_headline(args.ref, args.headline, args.out, center_pct=args.text_center, accent_color=acc,
                                 safe=args.safe, show_safe=args.show_safe)
         meta.update({"base_image": args.ref, "typography": info})
@@ -475,9 +534,9 @@ def main():
         logo_path = logo_send
 
     if args.style == "cinema":
-        prompt = prompt_cinema(title, bool(logo_path), brand_name, args.mood)
+        prompt = prompt_cinema(title, bool(logo_path), brand_name, args.mood) + (brand_light_hint(args.logo) if logo_path else "")
     else:
-        prompt = prompt_influencia(title, (args.headline or "").replace("*", ""), bool(logo_path), brand_name)
+        prompt = prompt_influencia(title, (args.headline or "").replace("*", ""), bool(logo_path), brand_name) + (brand_light_hint(args.logo) if logo_path else "")
     prompt_file = os.path.join(tmp, "prompt.txt")
     open(prompt_file, "w", encoding="utf-8").write(prompt)
     raw = os.path.join(tmp, "raw.png")
@@ -497,7 +556,7 @@ def main():
     if args.keep_raw:
         shutil.copyfile(fitted, args.keep_raw)
     if args.style == "cinema" and args.headline:
-        acc = None if str(args.accent_color).lower() == "none" else args.accent_color
+        acc = resolve_accent(args.accent_color, None if args.no_logo else args.logo)
         info = compose_headline(fitted, args.headline, args.out, center_pct=args.text_center, accent_color=acc,
                                 safe=args.safe, show_safe=args.show_safe)
         meta["typography"] = info

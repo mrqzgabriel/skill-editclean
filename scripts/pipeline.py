@@ -354,6 +354,8 @@ def stage_assets(work, job):
                                          "--keep-raw", os.path.join(P["capa_dir"], "sem_texto_%s.png" % mood)]
         if cov.get("logo"):
             cmd += ["--logo", cov["logo"]]
+        if cov.get("accent_color"):                  # v3.5: override da cor da marca (#hex ou none)
+            cmd += ["--accent-color", cov["accent_color"]]
         if proj:
             cmd += ["--project", proj]
         elif ref:

@@ -5,108 +5,277 @@
   "brands": {
     "claude": {
       "name": "Claude (Anthropic)",
-      "aliases": ["claude", "cloud", "fable", "mythos", "opus", "sonnet", "haiku"],
-      "sources": [{"url": "https://claude.ai/favicon.svg", "kind": "svg"}],
+      "aliases": [
+        "claude",
+        "cloud",
+        "fable",
+        "mythos",
+        "opus",
+        "sonnet",
+        "haiku"
+      ],
+      "sources": [
+        {
+          "url": "https://claude.ai/favicon.svg",
+          "kind": "svg"
+        }
+      ],
       "color": "#D97757",
-      "palette": {"bloom": [255, 98, 38], "halo": [255, 146, 78], "core": [242, 163, 126], "hot": [255, 236, 214]},
-      "_palette_note": "valores aprovados no Fable 5.1 v1 (01/09); a derivacao automatica de #D97757 sai mais rosada"
+      "palette": {
+        "bloom": [
+          255,
+          98,
+          38
+        ],
+        "halo": [
+          255,
+          146,
+          78
+        ],
+        "core": [
+          242,
+          163,
+          126
+        ],
+        "hot": [
+          255,
+          236,
+          214
+        ]
+      },
+      "_palette_note": "valores aprovados no Fable 5.1 v1 (01/09); a derivacao automatica de #D97757 sai mais rosada",
+      "cover_accent": "#D97757",
+      "cover_accent_name": "warm coral orange"
     },
     "anthropic": {
       "name": "Anthropic",
-      "aliases": ["anthropic", "antropic", "antrophic"],
-      "sources": [{"url": "https://upload.wikimedia.org/wikipedia/commons/7/78/Anthropic_logo.svg", "kind": "svg"}],
-      "color": "#D97757"
+      "aliases": [
+        "anthropic",
+        "antropic",
+        "antrophic"
+      ],
+      "sources": [
+        {
+          "url": "https://upload.wikimedia.org/wikipedia/commons/7/78/Anthropic_logo.svg",
+          "kind": "svg"
+        }
+      ],
+      "color": "#D97757",
+      "cover_accent": "#D97757",
+      "cover_accent_name": "warm coral orange"
     },
     "openai": {
       "name": "OpenAI / ChatGPT",
-      "aliases": ["openai", "open ai", "chatgpt", "chat gpt", "gpt", "codex"],
-      "sources": [{"url": "https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg", "kind": "svg", "remove_fill": ["#74aa9c"]}],
+      "aliases": [
+        "openai",
+        "open ai",
+        "chatgpt",
+        "chat gpt",
+        "gpt",
+        "codex"
+      ],
+      "sources": [
+        {
+          "url": "https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg",
+          "kind": "svg",
+          "remove_fill": [
+            "#74aa9c"
+          ]
+        }
+      ],
       "color": "#FFFFFF",
       "glow": 0.7,
-      "_glow_note": "v3.1 (03/09): 'diminua o glow do logo da openai' -- o mark e so linha fina, o bloom frio estourava"
+      "_glow_note": "v3.1 (03/09): 'diminua o glow do logo da openai' -- o mark e so linha fina, o bloom frio estourava",
+      "cover_accent": "#3FA9F5",
+      "cover_accent_name": "electric tech blue"
     },
     "cursor": {
       "name": "Cursor",
-      "aliases": ["cursor"],
-      "sources": [{"url": "file:///Users/gabriel/.claude/skills/editclean/references/logo-sources/cursor-icon.svg", "kind": "svg"}],
+      "aliases": [
+        "cursor"
+      ],
+      "sources": [
+        {
+          "url": "file:///Users/gabriel/.claude/skills/editclean/references/logo-sources/cursor-icon.svg",
+          "kind": "svg"
+        }
+      ],
       "color": "#FFFFFF",
       "_origin": "icone isolado do primeiro <path> do logo inline (site-header) de cursor.com -- o favicon.svg oficial vem com fundo quadrado chapado (mancha o bloom); este path e o mesmo mark, so sem o fundo"
     },
     "coderabbit": {
       "name": "CodeRabbit",
-      "aliases": ["coderabbit", "code rabbit"],
-      "sources": [{"url": "file:///Users/gabriel/.claude/skills/editclean/references/logo-sources/coderabbit-icon.svg", "kind": "svg"}],
+      "aliases": [
+        "coderabbit",
+        "code rabbit"
+      ],
+      "sources": [
+        {
+          "url": "file:///Users/gabriel/.claude/skills/editclean/references/logo-sources/coderabbit-icon.svg",
+          "kind": "svg"
+        }
+      ],
       "color": "#FF570A",
       "_origin": "coelho isolado do <path class=\"...fill-white\"> do site-header-logo-symbol-svg de coderabbit.ai -- o favicon/apple-touch-icon oficial vem com o circulo laranja chapado (mancha o bloom); este path e o mesmo coelho, so sem o circulo"
     },
     "apple": {
       "name": "Apple",
-      "aliases": ["apple", "épol", "epol"],
-      "sources": [{"url": "https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg", "kind": "svg"}],
+      "aliases": [
+        "apple",
+        "épol",
+        "epol"
+      ],
+      "sources": [
+        {
+          "url": "https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg",
+          "kind": "svg"
+        }
+      ],
       "color": "#FFFFFF",
       "_origin": "SVG oficial na Wikimedia Commons (Apple_logo_black.svg); o renderer usa so o alfa, a cor do fill nao importa"
     },
     "nvidia": {
       "name": "NVIDIA",
-      "aliases": ["nvidia", "envidia", "dgx spark", "spark", "dgx"],
-      "sources": [{"url": "https://upload.wikimedia.org/wikipedia/commons/a/a4/NVIDIA_logo.svg", "kind": "svg"}],
+      "aliases": [
+        "nvidia",
+        "envidia",
+        "dgx spark",
+        "spark",
+        "dgx"
+      ],
+      "sources": [
+        {
+          "url": "https://upload.wikimedia.org/wikipedia/commons/a/a4/NVIDIA_logo.svg",
+          "kind": "svg"
+        }
+      ],
       "color": "#76B900",
       "_origin": "wordmark oficial (olho + NVIDIA) na Wikimedia Commons; 'spark'/'dgx' = produto DGX Spark da NVIDIA, mesma regra do codex -> openai"
     },
     "spacex": {
       "name": "SpaceX",
-      "aliases": ["spacex", "space x"],
-      "sources": [{"url": "https://upload.wikimedia.org/wikipedia/commons/d/de/SpaceX-Logo.svg", "kind": "svg"}],
+      "aliases": [
+        "spacex",
+        "space x"
+      ],
+      "sources": [
+        {
+          "url": "https://upload.wikimedia.org/wikipedia/commons/d/de/SpaceX-Logo.svg",
+          "kind": "svg"
+        }
+      ],
       "color": "#FFFFFF"
     },
     "google": {
       "name": "Google",
-      "aliases": ["google"],
-      "sources": [{"url": "https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg", "kind": "svg"}],
+      "aliases": [
+        "google"
+      ],
+      "sources": [
+        {
+          "url": "https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg",
+          "kind": "svg"
+        }
+      ],
       "color": "#4285F4"
     },
     "gemini": {
       "name": "Gemini (Google)",
-      "aliases": ["gemini"],
-      "sources": [{"url": "https://www.gstatic.com/lamda/images/gemini_favicon_f069958c85030456e93de685481c559f160ea06b.png", "kind": "png"}],
+      "aliases": [
+        "gemini"
+      ],
+      "sources": [
+        {
+          "url": "https://www.gstatic.com/lamda/images/gemini_favicon_f069958c85030456e93de685481c559f160ea06b.png",
+          "kind": "png"
+        }
+      ],
       "color": "#4E8CF6"
     },
     "meta": {
       "name": "Meta",
-      "aliases": ["meta", "llama", "facebook"],
-      "sources": [{"url": "https://upload.wikimedia.org/wikipedia/commons/7/7b/Meta_Platforms_Inc._logo.svg", "kind": "svg"}],
+      "aliases": [
+        "meta",
+        "llama",
+        "facebook"
+      ],
+      "sources": [
+        {
+          "url": "https://upload.wikimedia.org/wikipedia/commons/7/7b/Meta_Platforms_Inc._logo.svg",
+          "kind": "svg"
+        }
+      ],
       "color": "#0081FB"
     },
     "microsoft": {
       "name": "Microsoft",
-      "aliases": ["microsoft", "copilot"],
-      "sources": [{"url": "https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg", "kind": "svg", "remove_fill": ["#f3f3f3"]}],
+      "aliases": [
+        "microsoft",
+        "copilot"
+      ],
+      "sources": [
+        {
+          "url": "https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg",
+          "kind": "svg",
+          "remove_fill": [
+            "#f3f3f3"
+          ]
+        }
+      ],
       "color": "#00A4EF"
     },
     "deepseek": {
       "name": "DeepSeek",
-      "aliases": ["deepseek", "deep seek"],
-      "sources": [{"url": "https://cdn.deepseek.com/logo.png", "kind": "png"}],
+      "aliases": [
+        "deepseek",
+        "deep seek"
+      ],
+      "sources": [
+        {
+          "url": "https://cdn.deepseek.com/logo.png",
+          "kind": "png"
+        }
+      ],
       "color": "#4D6BFE"
     },
     "mistral": {
       "name": "Mistral AI",
-      "aliases": ["mistral"],
-      "sources": [{"url": "https://mistral.ai/favicon.ico", "kind": "ico"}],
+      "aliases": [
+        "mistral"
+      ],
+      "sources": [
+        {
+          "url": "https://mistral.ai/favicon.ico",
+          "kind": "ico"
+        }
+      ],
       "color": "#FF7000"
     },
     "perplexity": {
       "name": "Perplexity",
-      "aliases": ["perplexity"],
-      "sources": [{"url": "https://www.perplexity.ai/favicon.svg", "kind": "svg", "alpha_from_luma": true}],
+      "aliases": [
+        "perplexity"
+      ],
+      "sources": [
+        {
+          "url": "https://www.perplexity.ai/favicon.svg",
+          "kind": "svg",
+          "alpha_from_luma": true
+        }
+      ],
       "color": "#20B8CD"
     },
     "xai": {
       "name": "xAI / Grok",
-      "aliases": ["xai", "x ai", "grok"],
+      "aliases": [
+        "xai",
+        "x ai",
+        "grok"
+      ],
       "sources": [],
       "color": "#FFFFFF",
       "_todo": "x.ai/favicon.svg deu 404 e a Wikimedia nao tem o SVG; sem asset oficial o script pula a animacao"
     }
-  }
+  },
+  "_cover_accent_note": "v3.5 (05/09/2026), pedido do Gabriel: 'quando falar do Claude usar aquele laranja, quando falar do GPT usar esse azul, e se falar de outra use a cor da empresa'. make_cover usa cover_accent > color (ignora branco) para a enfase do titulo e para a luz do logo no prompt da imagem. Marca nova: preencha 'color' (cor oficial) ou 'cover_accent'."
 }
