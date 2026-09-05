@@ -579,6 +579,28 @@ logo e SFX, `insercoes/`, `sfx-manifest.json`, `.capa.json`, `.legenda.json`, `j
 Pasta existente vira `(2)` a menos que `--overwrite` (use-o na versão corrigida do mesmo vídeo).
 Abra o vídeo para o Gabriel (`open`) quando ele pedir para ver.
 
+## 9c. Publicar no Instagram pelo influencIA (v3.5, 05/09/2026)
+
+O publicador do influencIA (Reels via Instagram Graph, conta conectada por influenciador) publica o
+**render `completed` mais recente do projeto** (`edit_jobs.edited_video_url` + `thumbnail_object_name`
++ `caption_text`). Um vídeo editado pela skill não existe lá; registre-o primeiro (não publica nada):
+
+```bash
+cd ~/Desktop/MandatoJá/influencIA/artifacts/api-server && pnpm exec tsx --env-file=../../.env \
+  src/scripts/publish-external-final.ts <projectId> "<pasta>/<Nome>.mp4" "<pasta>/<Nome>_CAPA.png" \
+  "<pasta>/<Nome>_LEGENDA.txt" <duracao_s>
+```
+
+Sobe o MP4 em `edited-videos/<projectId>/edited-external-*.mp4` (o prefixo `edited-` é o que o
+publisher procura), a capa em `thumbnails/<projectId>/thumbnail-*.png`, cria o `edit_job` `completed`
+com a legenda e marca o projeto `completed`. Banco e MinIO de PRODUÇÃO. Depois, **só com o ok do
+Gabriel** (é irreversível e a Meta não deixa trocar a capa depois): `POST
+/api/instagram-publish/projects/<id>/publish` `{}` pela `influencia_fix_part.Api` e acompanhe
+`GET /projects/<id>` → `instagramPublish.status` (`queued → preparing → processing → publishing →
+published`, 1–2 min; `ERROR` de container é passageiro, o publisher tenta de novo em 2/5/15 min).
+O permalink vem com `/reel/`. Conferir antes: `GET /instagram-publish/accounts` tem a conta do
+influenciador com token válido.
+
 ## 10. Relatar
 
 Caminho da pasta; duração antes → depois; por parte: o que foi regenerado (cópia antiga → nova,
